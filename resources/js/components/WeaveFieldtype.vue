@@ -80,12 +80,12 @@
                             ...(panelPosition ? { top: panelPosition.top + 'px', left: panelPosition.left + 'px' } : {}),
                         }"
                     >
-                        {{-- Gate on per-node meta: fieldtype components (Grid rows,
+                        <!-- Gate on per-node meta: fieldtype components (Grid rows,
                              Assets chips, ...) snapshot `meta` on mount and don't
                              re-render when it changes later — mounting before
                              fetchNodeMeta() resolves renders them from the
                              type-level default meta (empty rows/chips) and
-                             never recovers. --}}
+                             never recovers. -->
                         <props-panel
                             v-if="nodeMeta[selectedBlockId]"
                             :node="selectedNode"
