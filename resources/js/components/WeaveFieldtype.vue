@@ -2,7 +2,8 @@
     <Teleport to="body" :disabled="!fullScreenMode">
     <div
         class="weave-fieldtype"
-        :class="fullScreenMode ? 'fixed inset-0 z-50 overflow-hidden rounded-none bg-gray-100 dark:bg-gray-900' : ''"
+        :class="fullScreenMode ? 'fixed inset-0 overflow-hidden rounded-none bg-gray-100 dark:bg-gray-900' : ''"
+        :style="fullScreenMode ? { zIndex: 1 } : null"
     >
         <div :class="fullScreenMode ? 'flex h-full flex-col p-4' : ''">
             <div v-if="fullScreenMode" class="flex items-center justify-between mb-2 shrink-0">
