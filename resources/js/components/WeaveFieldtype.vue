@@ -80,10 +80,17 @@
                             ...(panelPosition ? { top: panelPosition.top + 'px', left: panelPosition.left + 'px' } : {}),
                         }"
                     >
+                        {{-- Gate on per-node meta: fieldtype components (Grid rows,
+                             Assets chips, ...) snapshot `meta` on mount and don't
+                             re-render when it changes later — mounting before
+                             fetchNodeMeta() resolves renders them from the
+                             type-level default meta (empty rows/chips) and
+                             never recovers. --}}
                         <props-panel
+                            v-if="nodeMeta[selectedBlockId]"
                             :node="selectedNode"
                             :block-type="blockTypesMeta.find((b) => b.type === selectedNode.type)"
-                            :node-meta="nodeMeta[selectedBlockId] || {}"
+                            :node-meta="nodeMeta[selectedBlockId]"
                             :pinned="panelPinned"
                             @close="selectedBlockId = null"
                             @toggle-pin="panelPinned = ! panelPinned"
@@ -244,7 +251,12 @@ export default {
                 body: JSON.stringify({ type: node.type, props: node.props }),
             });
 
-            if (! response.ok) return;
+            if (! response.ok) {
+                // Don't leave the panel gated forever on a failed fetch — fall
+                // back to the type-level meta so fields still render.
+                this.nodeMeta[id] = {};
+                return;
+            }
 
             const { meta } = await response.json();
             this.nodeMeta[id] = meta;
