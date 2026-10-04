@@ -25,7 +25,7 @@
                 :key="field.handle"
                 :field="field"
                 :value="node.props[field.handle] ?? blockType?.defaults?.[field.handle]"
-                :meta="meta[field.handle]"
+                :meta="meta[field.handle] ?? {}"
                 @update:value="(value) => updateField(field, value)"
             />
         </div>
@@ -47,7 +47,7 @@
                         :key="field.handle"
                         :field="field"
                         :value="node.props[field.handle] ?? blockType?.defaults?.[field.handle]"
-                        :meta="meta[field.handle]"
+                        :meta="meta[field.handle] ?? {}"
                         @update:value="(value) => updateField(field, value)"
                     />
                 </div>

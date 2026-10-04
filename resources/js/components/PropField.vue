@@ -8,7 +8,7 @@
             :is="`${field.component ?? field.type}-fieldtype`"
             :value="value"
             :config="field"
-            :meta="meta"
+            :meta="meta ?? {}"
             :handle="field.handle"
             @update:value="$emit('update:value', $event)"
         />
@@ -22,7 +22,7 @@ export default {
     props: {
         field: { type: Object, required: true },
         value: { default: null },
-        meta: { default: null },
+        meta: { default: () => ({}) },
     },
 
     emits: ['update:value'],
