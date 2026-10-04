@@ -126,6 +126,7 @@
 </template>
 
 <script>
+import uuid from '../lib/uuid';
 import { Fieldtype, clone, debounce } from '@statamic/cms';
 import { Button } from '@statamic/cms/ui';
 import BlocksPanel from './BlocksPanel.vue';
@@ -275,7 +276,7 @@ export default {
             if (! definition) return;
 
             const node = {
-                id: crypto.randomUUID(),
+                id: uuid(),
                 type,
                 props: clone(definition.defaults) || {},
             };

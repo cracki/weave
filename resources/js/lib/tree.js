@@ -1,3 +1,4 @@
+import uuid from './uuid';
 export function findNodeById(nodes, id) {
     for (const node of nodes) {
         if (node.id === id) return node;
@@ -36,7 +37,7 @@ export function containingArray(nodes, id) {
 export function reassignIds(node) {
     return {
         ...node,
-        id: crypto.randomUUID(),
+        id: uuid(),
         children: node.children ? node.children.map(reassignIds) : undefined,
     };
 }

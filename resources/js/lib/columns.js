@@ -1,3 +1,4 @@
+import uuid from './uuid';
 // Mirrors the `preset` options on Blocks/Columns.php (width = Column's flex-grow share).
 // Still a flex-grow ratio, not a real CSS percentage (see Column.php) — these
 // just sum to 100 so they read as literal percentages.
@@ -13,7 +14,7 @@ function widthsForPreset(preset) {
 
 export function columnsForPreset(preset) {
     return widthsForPreset(preset).map((width) => ({
-        id: crypto.randomUUID(),
+        id: uuid(),
         type: 'column',
         props: { width },
         children: [],
@@ -27,6 +28,6 @@ export function resizeColumnsForPreset(existingChildren, preset) {
         const existing = existingChildren[i];
         return existing
             ? { ...existing, props: { ...existing.props, width } }
-            : { id: crypto.randomUUID(), type: 'column', props: { width }, children: [] };
+            : { id: uuid(), type: 'column', props: { width }, children: [] };
     });
 }
