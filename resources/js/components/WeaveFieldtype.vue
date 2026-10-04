@@ -154,12 +154,12 @@ export default {
             // `position: fixed` descendants, which breaks any select/dropdown
             // popup inside the panel that relies on `fixed` to escape overflow).
             panelPosition: null,
-            // Per-node relationship-field display data (title/thumbnail for
-            // whatever's currently selected), keyed by node id — see
-            // fetchNodeMeta(). blockTypesMeta's own `meta` is computed once per
-            // block TYPE from empty defaultProps(), so it never has this for an
-            // actual selected value.
-            nodeMeta: {},
+            // Per-node field meta, keyed by node id — Grid row metas, resolved
+            // titles/thumbnails for relational fields, ... Seeded server-side by
+            // Weave::preload()'s nodeMeta (computed from the actual saved values)
+            // and refreshed by fetchNodeMeta() for newly added nodes. This is the
+            // live meta store the scoped NodeContainer reads from.
+            nodeMeta: clone(this.meta?.nodeMeta ?? {}),
             clipboard: null,
             contextMenu: null,
             viewport: 'desktop',

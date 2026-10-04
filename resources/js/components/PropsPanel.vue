@@ -19,69 +19,57 @@
             </div>
         </div>
 
-        <div class="space-y-4">
-            <PropField
-                v-for="field in contentFields"
-                :key="field.handle"
-                :field="field"
-                :value="node.props[field.handle] ?? blockType?.defaults?.[field.handle]"
-                :meta="meta[field.handle] ?? {}"
-                @update:value="(value) => updateField(field, value)"
-            />
-        </div>
-
-        <div v-if="styleSections.length || groups.length" class="mt-5 space-y-1 border-t border-gray-200 pt-3 dark:border-gray-700">
-            <div v-for="section in styleSections" :key="section.title">
-                <button
-                    type="button"
-                    class="flex w-full items-center gap-1 py-2 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"
-                    @click="toggleSection(section.title)"
-                >
-                    <Icon :name="isSectionCollapsed(section.title) ? 'chevron-right' : 'chevron-down'" class="size-3" />
-                    {{ section.title }}
-                </button>
-
-                <div v-if="!isSectionCollapsed(section.title)" class="space-y-4 pb-3">
-                    <PropField
-                        v-for="field in section.fields"
-                        :key="field.handle"
-                        :field="field"
-                        :value="node.props[field.handle] ?? blockType?.defaults?.[field.handle]"
-                        :meta="meta[field.handle] ?? {}"
-                        @update:value="(value) => updateField(field, value)"
-                    />
-                </div>
+        <NodeContainer :node="node" :meta="nodeMeta">
+            <div class="space-y-4">
+                <PropField v-for="field in contentFields" :key="field.handle" :field="field" />
             </div>
 
-            <div v-if="groups.length">
-                <button
-                    type="button"
-                    class="flex w-full items-center gap-1 py-2 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"
-                    @click="toggleSection('Spacing')"
-                >
-                    <Icon :name="isSectionCollapsed('Spacing') ? 'chevron-right' : 'chevron-down'" class="size-3" />
-                    Spacing
-                </button>
+            <div v-if="styleSections.length || groups.length" class="mt-5 space-y-1 border-t border-gray-200 pt-3 dark:border-gray-700">
+                <div v-for="section in styleSections" :key="section.title">
+                    <button
+                        type="button"
+                        class="flex w-full items-center gap-1 py-2 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"
+                        @click="toggleSection(section.title)"
+                    >
+                        <Icon :name="isSectionCollapsed(section.title) ? 'chevron-right' : 'chevron-down'" class="size-3" />
+                        {{ section.title }}
+                    </button>
 
-                <div v-if="!isSectionCollapsed('Spacing')" class="space-y-4 pb-3">
-                    <BoxModelControl
-                        v-for="group in groups"
-                        :key="group.name"
-                        :title="group.title"
-                        :fields="group.fields"
-                        :node="node"
-                    />
+                    <div v-if="!isSectionCollapsed(section.title)" class="space-y-4 pb-3">
+                        <PropField v-for="field in section.fields" :key="field.handle" :field="field" />
+                    </div>
+                </div>
+
+                <div v-if="groups.length">
+                    <button
+                        type="button"
+                        class="flex w-full items-center gap-1 py-2 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"
+                        @click="toggleSection('Spacing')"
+                    >
+                        <Icon :name="isSectionCollapsed('Spacing') ? 'chevron-right' : 'chevron-down'" class="size-3" />
+                        Spacing
+                    </button>
+
+                    <div v-if="!isSectionCollapsed('Spacing')" class="space-y-4 pb-3">
+                        <BoxModelControl
+                            v-for="group in groups"
+                            :key="group.name"
+                            :title="group.title"
+                            :fields="group.fields"
+                            :node="node"
+                        />
+                    </div>
                 </div>
             </div>
-        </div>
+        </NodeContainer>
     </Card>
 </template>
 
 <script>
 import { Button, Card, Icon } from '@statamic/cms/ui';
 import BoxModelControl from './BoxModelControl.vue';
+import NodeContainer from './NodeContainer.vue';
 import PropField from './PropField.vue';
-import { resizeColumnsForPreset } from '../lib/columns';
 
 const RELATIONAL_FIELD_TYPES = ['entries', 'assets', 'terms', 'users'];
 
@@ -98,15 +86,15 @@ const STYLE_SECTIONS = [
 ];
 
 export default {
-    components: { Button, Card, Icon, BoxModelControl, PropField },
+    components: { Button, Card, Icon, BoxModelControl, NodeContainer, PropField },
 
     props: {
         node: { type: Object, required: true },
         blockType: { type: Object, default: null },
         // Per-node meta (resolved title/thumbnail for a relationship field's
-        // current value) fetched by the parent — see fetchNodeMeta() in
-        // WeaveFieldtype.vue. Wins over blockType.meta per field handle,
-        // which only ever reflects empty defaultProps().
+        // current value, Grid row metas, ...) — seeded from Weave::preload's
+        // nodeMeta and refreshed by fetchNodeMeta() in WeaveFieldtype.vue.
+        // Doubles as the NodeContainer's live meta store.
         nodeMeta: { type: Object, default: () => ({}) },
         pinned: { type: Boolean, default: false },
     },
@@ -123,10 +111,6 @@ export default {
     computed: {
         fields() {
             return this.blockType?.fields || [];
-        },
-
-        meta() {
-            return { ...this.blockType?.meta, ...this.nodeMeta };
         },
 
         ungroupedFields() {
@@ -161,6 +145,31 @@ export default {
                 fields,
             }));
         },
+
+        // Signature of the relational props — watched so the parent can refetch
+        // per-node meta (resolved titles/thumbnails) after a new value is picked
+        // through the scoped container, which bypasses the old updateField path.
+        relationalSignature() {
+            return JSON.stringify(
+                this.fields
+                    .filter((field) => RELATIONAL_FIELD_TYPES.includes(field.type))
+                    .map((field) => this.node.props?.[field.handle] ?? null),
+            );
+        },
+    },
+
+    watch: {
+        relationalSignature(value, previous) {
+            if (previous !== undefined && value !== previous) this.$emit('meta-stale');
+        },
+
+        // Selects are now bound through the scoped container, which bypasses the
+        // old updateField() side effect — keep the Columns preset behaviour here.
+        'node.props.preset'(value) {
+            if (this.node.type === 'columns' && value) {
+                this.node.children = resizeColumnsForPreset(this.node.children || [], value);
+            }
+        },
     },
 
     methods: {
@@ -187,23 +196,6 @@ export default {
 
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
-        },
-
-        updateField(field, value) {
-            this.node.props[field.handle] = value;
-
-            if (field.handle === 'preset' && this.node.type === 'columns') {
-                this.node.children = resizeColumnsForPreset(this.node.children || [], value);
-            }
-
-            // Relational fieldtypes (entries, assets, terms, users) render their
-            // selected value's title/thumbnail from `meta`, which was fetched once
-            // when the block was selected — picking a new value here goes stale
-            // until the parent refetches it (see fetchNodeMeta() in
-            // WeaveFieldtype.vue).
-            if (RELATIONAL_FIELD_TYPES.includes(field.type)) {
-                this.$emit('meta-stale');
-            }
         },
     },
 };
