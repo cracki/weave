@@ -97,6 +97,32 @@ class WeaveTest extends TestCase
         $this->assertSame('Hi', $result[0]['children'][0]['children'][0]['props']['text']);
     }
 
+    public function test_augment_recursively_unwraps_select_values_inside_grid_rows()
+    {
+        $data = [[
+            'id' => 'hero-test',
+            'type' => 'hero',
+            'props' => [
+                'lines' => ['Headline'],
+                'background' => null,
+                'buttons' => [[
+                    '_id' => 'button-test',
+                    'label' => 'Get started',
+                    'href' => '#contact',
+                    'variant' => 'dark',
+                ]],
+            ],
+            'children' => [],
+        ]];
+
+        $button = (new Weave)->augment($data)[0]['props']['buttons'][0];
+
+        $this->assertIsArray($button);
+        $this->assertSame('Get started', $button['label']);
+        $this->assertSame('#contact', $button['href']);
+        $this->assertSame('dark', $button['variant']);
+    }
+
     public function test_preload_ships_field_configs_for_every_registered_block()
     {
         $preload = (new Weave)->preload();

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Log;
 use Statamic\Fields\ArrayableString;
 use Statamic\Fields\Blueprint;
 use Statamic\Fields\Value;
+use Statamic\Fields\Values;
 
 class BlockTreeAugmentor
 {
@@ -53,6 +54,10 @@ class BlockTreeAugmentor
 
         if ($value instanceof ArrayableString) {
             return $value->value();
+        }
+
+        if ($value instanceof Values) {
+            return collect($value->all())->map(fn ($v) => static::unwrap($v))->all();
         }
 
         if (is_array($value)) {
