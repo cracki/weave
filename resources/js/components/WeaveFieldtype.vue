@@ -7,25 +7,50 @@
     >
         <div :class="fullScreenMode ? 'flex h-full flex-col p-4' : ''">
             <div v-if="fullScreenMode" class="flex items-center justify-between mb-2 shrink-0">
-                <div class="flex items-center gap-1 rounded-md border border-gray-200 p-1 dark:border-gray-700">
+                <div class="flex items-center gap-2">
                     <Button
-                        v-for="preset in viewportPresets"
-                        :key="preset.key"
-                        :text="preset.label"
+                        v-tooltip="__('Blocks panel')"
+                        :aria-label="__('Blocks panel')"
+                        :aria-expanded="blocksPanelOpen"
+                        icon="burger-menu"
+                        icon-only
                         size="xs"
-                        :variant="viewport === preset.key ? 'primary' : 'ghost'"
-                        @click="viewport = preset.key"
+                        :variant="blocksPanelOpen ? 'primary' : 'ghost'"
+                        @click="blocksPanelOpen = !blocksPanelOpen"
                     />
+                    <div class="flex items-center gap-1 rounded-md border border-gray-200 p-1 dark:border-gray-700">
+                        <Button
+                            v-for="preset in viewportPresets"
+                            :key="preset.key"
+                            :text="preset.label"
+                            size="xs"
+                            :variant="viewport === preset.key ? 'primary' : 'ghost'"
+                            @click="viewport = preset.key"
+                        />
+                    </div>
                 </div>
 
-                <Button
-                    v-tooltip="__('Exit Fullscreen Mode')"
-                    text="Close"
-                    icon="x"
-                    size="xs"
-                    variant="default"
-                    @click="toggleFullscreen"
-                />
+                <div class="flex items-center gap-2">
+                    <Button
+                        v-tooltip="__('Properties panel')"
+                        :aria-label="__('Properties panel')"
+                        :aria-expanded="propsPanelOpen && !!selectedNode"
+                        :disabled="!selectedNode"
+                        icon="sliders-horizontal"
+                        icon-only
+                        size="xs"
+                        :variant="propsPanelOpen && selectedNode ? 'primary' : 'ghost'"
+                        @click="propsPanelOpen = !propsPanelOpen"
+                    />
+                    <Button
+                        v-tooltip="__('Exit Fullscreen Mode')"
+                        :text="__('Close')"
+                        icon="x"
+                        size="xs"
+                        variant="default"
+                        @click="toggleFullscreen"
+                    />
+                </div>
             </div>
 
             <div v-else class="flex justify-end mb-2 shrink-0">
@@ -40,7 +65,7 @@
             </div>
 
             <div v-if="fullScreenMode" class="flex flex-1 gap-1 min-h-0">
-                <div class="weave-scroll w-72 shrink-0 overflow-y-auto">
+                <div v-show="blocksPanelOpen" class="weave-scroll weave-blocks-drawer shrink-0 overflow-y-auto">
                     <blocks-panel
                         ref="blocksPanel"
                         :blocks="blocks"
@@ -72,14 +97,8 @@
 
                     <div
                         v-if="selectedNode"
-                        ref="propsPanelEl"
-                        :class="['weave-scroll', panelPinned
-                            ? 'w-80 shrink-0 overflow-y-auto'
-                            : ['absolute z-20 w-80 overflow-y-auto shadow-2xl', panelPosition ? '' : 'right-0 top-0']]"
-                        :style="panelPinned ? null : {
-                            maxHeight: '100%',
-                            ...(panelPosition ? { top: panelPosition.top + 'px', left: panelPosition.left + 'px' } : {}),
-                        }"
+                        v-show="propsPanelOpen"
+                        class="weave-scroll weave-props-panel absolute right-0 top-0 overflow-y-auto"
                     >
                         <!-- Gate on per-node meta: fieldtype components (Grid rows,
                              Assets chips, ...) snapshot `meta` on mount and don't
@@ -92,10 +111,8 @@
                             :node="selectedNode"
                             :block-type="blockTypesMeta.find((b) => b.type === selectedNode.type)"
                             :node-meta="nodeMeta[selectedBlockId]"
-                            :pinned="panelPinned"
-                            @close="selectedBlockId = null"
-                            @toggle-pin="panelPinned = ! panelPinned"
-                            @drag="onPanelDrag"
+                            :key="selectedBlockId"
+                            @close="propsPanelOpen = false"
                             @meta-stale="fetchNodeMeta(selectedBlockId)"
                         />
                     </div>
@@ -147,14 +164,8 @@ export default {
             blocks: clone(this.value) || [],
             selectedBlockId: null,
             fullScreenMode: false,
-            panelPinned: false,
-            // null = default top-right corner (via the `right-0 top-0` classes).
-            // Set on first drag to {top, left} px, measured from the panel's own
-            // offsetParent — plain position, no `transform` (a `transform` on this
-            // element — even `translate(0,0)` — makes it a containing block for
-            // `position: fixed` descendants, which breaks any select/dropdown
-            // popup inside the panel that relies on `fixed` to escape overflow).
-            panelPosition: null,
+            blocksPanelOpen: true,
+            propsPanelOpen: true,
             // Per-node field meta, keyed by node id — Grid row metas, resolved
             // titles/thumbnails for relational fields, ... Seeded server-side by
             // Weave::preload()'s nodeMeta (computed from the actual saved values)
@@ -210,8 +221,11 @@ export default {
         fullScreenMode(on) {
             document.querySelector('.nav-main')?.style.setProperty('visibility', on ? 'hidden' : '');
             document.body.style.setProperty('overflow', on ? 'hidden' : '');
-            if (! on) return;
-            document.addEventListener('keydown', this.onEscKey, { once: true });
+            if (! on) {
+                document.removeEventListener('keydown', this.onEscKey);
+                return;
+            }
+            document.addEventListener('keydown', this.onEscKey);
         },
     },
 
@@ -224,17 +238,6 @@ export default {
     methods: {
         update(value) {
             this.$emit('update:value', value);
-        },
-
-        onPanelDrag({ dx, dy }) {
-            if (! this.panelPosition) {
-                const el = this.$refs.propsPanelEl;
-                const rect = el.getBoundingClientRect();
-                const parentRect = el.offsetParent.getBoundingClientRect();
-                this.panelPosition = { top: rect.top - parentRect.top, left: rect.left - parentRect.left };
-            }
-
-            this.panelPosition = { top: this.panelPosition.top + dy, left: this.panelPosition.left + dx };
         },
 
         async fetchNodeMeta(id) {
@@ -269,7 +272,12 @@ export default {
         },
 
         onEscKey(e) {
-            if (e.key === 'Escape') this.fullScreenMode = false;
+            if (e.key !== 'Escape' || document.querySelector('.weave-repeater-modal')) return;
+            if (this.contextMenu) {
+                this.contextMenu = null;
+                return;
+            }
+            this.fullScreenMode = false;
         },
 
         addBlock({ type, parentId, index }) {
@@ -370,7 +378,8 @@ export default {
 
         openAddForParent(id) {
             this.selectedBlockId = id;
-            this.$refs.blocksPanel?.openAddPicker(id);
+            this.blocksPanelOpen = true;
+            this.$nextTick(() => this.$refs.blocksPanel?.openAddPicker(id));
         },
 
         openContextMenu({ id, x, y }) {
@@ -401,6 +410,18 @@ export default {
     scrollbar-color: rgba(120, 120, 130, 0.5) transparent;
 }
 
+.weave-blocks-drawer {
+    width: min(18rem, 35vw);
+}
+
+.weave-props-panel {
+    width: min(20rem, 100%);
+    max-height: 100%;
+    z-index: 1;
+    border-radius: 0.5rem;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+}
+
 .weave-scroll::-webkit-scrollbar {
     width: 8px;
 }
@@ -418,12 +439,7 @@ export default {
     background-color: rgba(120, 120, 130, 0.75);
 }
 
-/* Statamic's own CSS pins every popper-portaled dropdown (select, color picker,
-   etc — Reka UI's [data-reka-popper-content-wrapper]) to `z-index: var(--z-index-portal)`,
-   which is 2. Our floating props panel sits at z-20 (Tailwind `z-20`) so it wins
-   against that by default, burying any dropdown opened from inside it. Bump
-   just this attribute above our panel's z-index — same specificity as
-   Statamic's rule, so load order decides and this file loads after core CP CSS. */
+/* Keep portaled field dropdowns above the editor and its row-management modal. */
 [data-reka-popper-content-wrapper] {
     z-index: 100 !important;
 }

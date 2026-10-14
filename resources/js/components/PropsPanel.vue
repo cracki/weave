@@ -1,21 +1,17 @@
 <template>
     <Card>
-        <div
-            class="mb-3 flex items-center justify-between"
-            :class="{ 'cursor-move': ! pinned }"
-            @mousedown="startDrag"
-        >
+        <div class="mb-3 flex items-center justify-between">
             <span class="text-sm font-semibold">{{ blockType ? blockType.label : node.type }}</span>
             <div class="flex items-center gap-1">
                 <Button
-                    v-tooltip="pinned ? __('Unpin (float over canvas)') : __('Pin (dock in layout)')"
-                    icon="pin"
+                    v-tooltip="__('Close properties panel')"
+                    :aria-label="__('Close properties panel')"
+                    icon="x"
                     icon-only
                     size="sm"
-                    :variant="pinned ? 'primary' : 'ghost'"
-                    @click="$emit('toggle-pin')"
+                    variant="ghost"
+                    @click="$emit('close')"
                 />
-                <Button icon="x" icon-only variant="ghost" size="sm" @click="$emit('close')" />
             </div>
         </div>
 
@@ -70,6 +66,7 @@ import { Button, Card, Icon } from '@statamic/cms/ui';
 import BoxModelControl from './BoxModelControl.vue';
 import NodeContainer from './NodeContainer.vue';
 import PropField from './PropField.vue';
+import { resizeColumnsForPreset } from '../lib/columns';
 
 const RELATIONAL_FIELD_TYPES = ['entries', 'assets', 'terms', 'users'];
 
@@ -96,10 +93,9 @@ export default {
         // nodeMeta and refreshed by fetchNodeMeta() in WeaveFieldtype.vue.
         // Doubles as the NodeContainer's live meta store.
         nodeMeta: { type: Object, default: () => ({}) },
-        pinned: { type: Boolean, default: false },
     },
 
-    emits: ['close', 'toggle-pin', 'drag', 'meta-stale'],
+    emits: ['close', 'meta-stale'],
 
     data() {
         // Collapsed by default — this panel lists every generic style field on
@@ -181,22 +177,6 @@ export default {
             this.sectionCollapsed[title] = ! this.isSectionCollapsed(title);
         },
 
-        // Only meaningful while floating — pinned means docked in the normal layout
-        // flow. Reuses native `movementX/Y` instead of tracking previous coordinates
-        // by hand.
-        startDrag(e) {
-            if (this.pinned || e.target.closest('button')) return;
-            e.preventDefault();
-
-            const onMove = (ev) => this.$emit('drag', { dx: ev.movementX, dy: ev.movementY });
-            const onUp = () => {
-                document.removeEventListener('mousemove', onMove);
-                document.removeEventListener('mouseup', onUp);
-            };
-
-            document.addEventListener('mousemove', onMove);
-            document.addEventListener('mouseup', onUp);
-        },
     },
 };
 </script>
