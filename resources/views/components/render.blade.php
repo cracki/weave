@@ -34,9 +34,31 @@
             var el = e.target.closest('[data-weave-id]');
             if (! el) return;
             e.preventDefault();
+            var fieldEl = e.target.closest('[data-weave-field], [data-weave-prop]');
+            if (fieldEl && fieldEl.closest('[data-weave-id]') !== el) fieldEl = null;
+            var semanticEl = e.target.closest('h1, h2, h3, h4, h5, h6, a, button, img, figcaption, blockquote, p, [data-weave-text]');
+            if (semanticEl && semanticEl.closest('[data-weave-id]') !== el) semanticEl = null;
+            var tag = semanticEl ? semanticEl.tagName.toLowerCase() : '';
+            var kind = /^h[1-6]$/.test(tag) ? 'heading'
+                : /^(a|button)$/.test(tag) ? 'button'
+                : tag === 'img' ? 'image'
+                : tag === 'figcaption' ? 'caption'
+                : tag === 'blockquote' ? 'quote'
+                : semanticEl ? 'text' : null;
+            var texts = [];
+            for (var target = e.target; target && target !== el; target = target.parentElement) {
+                var text = (target.textContent || '').trim();
+                if (text && text.length <= 2000 && texts.indexOf(text) === -1) texts.push(text);
+                if (target === semanticEl || texts.length === 4) break;
+            }
             parent.postMessage({
                 type: 'block:contextmenu',
                 id: el.getAttribute('data-weave-id'),
+                target: {
+                    field: fieldEl ? (fieldEl.getAttribute('data-weave-field') || fieldEl.getAttribute('data-weave-prop')) : null,
+                    kind: kind,
+                    texts: texts,
+                },
                 x: e.clientX,
                 y: e.clientY,
             }, '*');

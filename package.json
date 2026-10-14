@@ -3,6 +3,7 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
+        "test:frontend": "node --test tests/frontend/*.test.mjs",
         "dev": "vite"
     },
     "devDependencies": {

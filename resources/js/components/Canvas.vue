@@ -83,6 +83,7 @@ export default {
         },
 
         onMessage(event) {
+            if (event.source !== this.$refs.frame?.contentWindow) return;
             if (event.data?.type === 'block:selected') {
                 this.$emit('select', event.data.id);
             }
@@ -109,7 +110,7 @@ export default {
 
             if (event.data?.type === 'block:contextmenu') {
                 const rect = this.$refs.frame.getBoundingClientRect();
-                this.$emit('contextmenu', { id: event.data.id, x: rect.left + event.data.x, y: rect.top + event.data.y });
+                this.$emit('contextmenu', { id: event.data.id, target: event.data.target, x: rect.left + event.data.x, y: rect.top + event.data.y });
             }
         },
 

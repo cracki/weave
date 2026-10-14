@@ -1,7 +1,7 @@
 <template>
     <Card>
         <div class="mb-3 flex items-center justify-between">
-            <span class="text-sm font-semibold">{{ blockType ? blockType.label : node.type }}</span>
+            <span ref="panelTitle" tabindex="-1" class="text-sm font-semibold">{{ blockType ? blockType.label : node.type }}</span>
             <div class="flex items-center gap-1">
                 <Button
                     v-tooltip="__('Close properties panel')"
@@ -49,13 +49,18 @@
                     </button>
 
                     <div v-if="!isSectionCollapsed('Spacing')" class="space-y-4 pb-3">
-                        <BoxModelControl
+                        <div
                             v-for="group in groups"
                             :key="group.name"
-                            :title="group.title"
-                            :fields="group.fields"
-                            :node="node"
-                        />
+                            :data-weave-spacing-fields="group.fields.map((field) => field.handle).join(',')"
+                            tabindex="-1"
+                        >
+                            <BoxModelControl
+                                :title="group.title"
+                                :fields="group.fields"
+                                :node="node"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -95,6 +100,7 @@ export default {
         // nodeMeta and refreshed by fetchNodeMeta() in WeaveFieldtype.vue.
         // Doubles as the NodeContainer's live meta store.
         nodeMeta: { type: Object, default: () => ({}) },
+        focusTarget: { type: Object, default: null },
     },
 
     emits: ['close', 'meta-stale'],
@@ -157,6 +163,12 @@ export default {
     },
 
     watch: {
+        focusTarget: {
+            immediate: true,
+            handler(target) {
+                if (target) this.focusField(target.field);
+            },
+        },
         relationalSignature(value, previous) {
             if (previous !== undefined && value !== previous) this.$emit('meta-stale');
         },
@@ -171,6 +183,40 @@ export default {
     },
 
     methods: {
+        async focusField(handle) {
+            const section = this.styleSections.find((section) => section.fields.some((field) => field.handle === handle));
+            if (section) this.sectionCollapsed[section.title] = false;
+            if (this.groups.some((group) => group.fields.some((field) => field.handle === handle))) {
+                this.sectionCollapsed.Spacing = false;
+            }
+
+            // Also waits for a newly selected node's panel to mount after metadata
+            // arrives, and for a previously collapsed section to render its fields.
+            await this.$nextTick();
+            if (!this.$el || this.focusTarget?.field !== handle) return;
+            const panel = this.$el.closest('.weave-props-panel');
+            const field = Array.from(this.$el.querySelectorAll('[data-weave-field], [data-weave-spacing-fields]'))
+                .find((el) => el.dataset.weaveField === handle || el.dataset.weaveSpacingFields?.split(',').includes(handle));
+            if (!field) {
+                panel?.scrollTo({ top: 0 });
+                this.$refs.panelTitle?.focus({ preventScroll: true });
+                return;
+            }
+
+            const control = field.querySelector('[aria-label="Manage rows"]')
+                || field.querySelector('input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled]), [contenteditable="true"], [role="combobox"]')
+                || field.querySelector('button:not([disabled])')
+                || field;
+            control.focus({ preventScroll: true });
+            if (panel) {
+                const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                panel.scrollTo({
+                    top: panel.scrollTop + field.getBoundingClientRect().top - panel.getBoundingClientRect().top - 12,
+                    behavior: reducedMotion ? 'instant' : 'smooth',
+                });
+            }
+        },
+
         isSectionCollapsed(title) {
             return this.sectionCollapsed[title] !== false;
         },

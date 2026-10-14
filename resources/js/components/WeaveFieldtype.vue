@@ -120,6 +120,7 @@
                             :block-type="blockTypesMeta.find((b) => b.type === selectedNode.type)"
                             :node-meta="nodeMeta[selectedBlockId]"
                             :key="selectedBlockId"
+                            :focus-target="fieldFocusTarget?.id === selectedBlockId ? fieldFocusTarget : null"
                             @close="propsPanelOpen = false"
                             @meta-stale="fetchNodeMeta(selectedBlockId)"
                         />
@@ -162,6 +163,7 @@ import ContextMenu from './ContextMenu.vue';
 import PropsPanel from './PropsPanel.vue';
 import { findNodeById, containingArray, reassignIds } from '../lib/tree';
 import { columnsForPreset } from '../lib/columns';
+import { resolveCanvasField } from '../lib/canvas-target';
 
 export default {
     mixins: [Fieldtype],
@@ -183,6 +185,7 @@ export default {
             nodeMeta: clone(this.meta?.nodeMeta ?? {}),
             clipboard: null,
             contextMenu: null,
+            fieldFocusTarget: null,
             viewport: 'desktop',
             viewportPresets: [
                 { key: 'desktop', label: 'Desktop' },
@@ -207,6 +210,7 @@ export default {
 
         contextMenuItems() {
             return [
+                { action: 'edit', icon: 'pencil', label: __('Edit') },
                 { action: 'duplicate', icon: 'duplicate', label: 'Duplicate' },
                 { action: 'copy', icon: 'clipboard', label: 'Copy' },
                 { action: 'paste', icon: 'clipboard-check', label: 'Paste', disabled: ! this.clipboard },
@@ -391,14 +395,23 @@ export default {
             this.$nextTick(() => this.$refs.blocksPanel?.openAddPicker(id));
         },
 
-        openContextMenu({ id, x, y }) {
-            this.contextMenu = { id, x, y };
+        openContextMenu({ id, target, x, y }) {
+            this.contextMenu = { id, target, x, y };
         },
 
         onContextAction(action) {
-            const id = this.contextMenu.id;
+            const { id, target } = this.contextMenu;
             this.contextMenu = null;
 
+            if (action === 'edit') {
+                const node = findNodeById(this.blocks, id);
+                if (!node) return;
+                const fields = this.blockTypesMeta.find((block) => block.type === node.type)?.fields || [];
+                this.selectedBlockId = id;
+                this.propsPanelOpen = true;
+                // A fresh object also refocuses when editing the same field twice.
+                this.fieldFocusTarget = { id, field: resolveCanvasField(node, fields, target) };
+            }
             if (action === 'duplicate') this.duplicateBlock(id);
             if (action === 'copy') this.copyBlock(id);
             if (action === 'paste') this.pasteBlock(id);

@@ -1,4 +1,5 @@
 <template>
+    <div :data-weave-field="field.handle" tabindex="-1">
     <PublishFieldsProvider :fields="[panelField]">
         <PublishField v-if="field.type !== 'grid'" :config="field" />
         <PublishField v-else :config="panelField">
@@ -79,6 +80,7 @@
             </template>
         </PublishField>
     </PublishFieldsProvider>
+    </div>
 </template>
 
 <script>
