@@ -45,10 +45,16 @@ function loadModalGrid() {
         Fieldtype: {
             props: fieldProps,
             emits: ['update:value', 'update:meta', 'focus', 'blur', 'replicator-preview-updated'],
-            computed: { isReadOnly() { return this.readOnly || ['read_only', 'computed'].includes(this.config.visibility); } },
-            methods: {
-                update(value) { this.$emit('update:value', value); },
-                updateMeta(meta) { this.$emit('update:meta', meta); },
+            // Statamic 6 exports a helper object. The Options API behavior is
+            // on Fieldtype.mixin, not on Fieldtype itself.
+            mixin: {
+                props: fieldProps,
+                emits: ['update:value', 'update:meta', 'focus', 'blur', 'replicator-preview-updated'],
+                computed: { isReadOnly() { return this.readOnly || ['read_only', 'computed'].includes(this.config.visibility); } },
+                methods: {
+                    update(value) { this.$emit('update:value', value); },
+                    updateMeta(meta) { this.$emit('update:meta', meta); },
+                },
             },
         },
     };
@@ -128,6 +134,9 @@ test('the modal forwards scoped props and native row metadata/value updates', as
     assert.deepEqual(state.events.map(([event]) => event), ['meta', 'value']);
     assert.equal(state.events[1][1][1]._id, 'added');
     assert.equal(state.instance.pendingAdd, false);
+    // The toolbar button in an already open modal uses the same path.
+    state.instance.addRow();
+    assert.deepEqual(state.events.map(([event]) => event), ['meta', 'value', 'meta', 'value']);
     state.app.unmount();
 });
 
@@ -142,6 +151,14 @@ test('nested grids open independent modals and closing a child leaves the parent
     assert.equal(state.nativeGrids.length, 2);
     assert.equal(state.nativeGrids[1].fieldPathPrefix, 'rows.0');
     assert.equal(state.nativeGrids[1].metaPathPrefix, 'rows.existing.row');
+    const childEvents = [];
+    // Native Grid emits to the nested wrapper, which must forward both
+    // events to the row's PublishField instead of dropping them.
+    childVm.$.vnode.props['onUpdate:value'] = value => childEvents.push(['value', value]);
+    childVm.$.vnode.props['onUpdate:meta'] = meta => childEvents.push(['meta', meta]);
+    childVm.addRow();
+    assert.deepEqual(childEvents.map(([event]) => event), ['meta', 'value']);
+    assert.equal(childEvents[1][1][0]._id, 'added');
     childVm.rowsOpen = false;
     await Vue.nextTick();
     assert.equal(state.instance.rowsOpen, true);

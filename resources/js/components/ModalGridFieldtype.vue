@@ -85,7 +85,7 @@ import { Button, Modal, ModalTitle } from '@statamic/cms/ui';
 // changes where it renders. PublishField supplies the same scoped paths at
 // every depth, including when this component lives inside another modal.
 export default {
-    mixins: [Fieldtype],
+    mixins: [Fieldtype.mixin],
 
     components: { Button, Modal, ModalTitle },
 
