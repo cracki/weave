@@ -38,8 +38,6 @@
                         @opened="addPendingRow"
                     >
                         <div class="weave-repeater-header">
-                            <ModalTitle class="text-sm font-semibold">{{ __(field.display || field.handle) }}</ModalTitle>
-                            <div class="flex items-center gap-2">
                             <Button
                                 v-tooltip="__('Add Row')"
                                 :aria-label="__('Add Row')"
@@ -50,6 +48,8 @@
                                 :disabled="!canAddRow(fieldtypeComponentProps)"
                                 @click="addRow"
                             />
+                            <div class="flex items-center gap-2">
+                            <ModalTitle class="text-sm font-semibold">{{ __(field.display || field.handle) }}</ModalTitle>
                             <Button
                                 v-tooltip="__('Close')"
                                 :aria-label="__('Close')"
