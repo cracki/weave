@@ -99,6 +99,14 @@ class Weave extends Fieldtype
                     ->fields()
                     ->addValues($block->finalDefaultProps());
 
+                // Grid metadata is keyed by publish-format _id values. Generate
+                // those before metadata, and use the same IDs in palette defaults.
+                $defaults = $fields->preProcess()->values()->all();
+                $metaFields = Blueprint::make()
+                    ->setContents(['fields' => $block->finalPropsSchema()])
+                    ->fields()
+                    ->addValues($defaults);
+
                 return [
                     'type' => $block->type(),
                     'label' => $block->label(),
@@ -107,14 +115,14 @@ class Weave extends Fieldtype
                     'category' => $block->category(),
                     'allowsChildren' => $block->allowsChildren(),
                     'fields' => $fields->toPublishArray(),
-                    'meta' => $fields->meta(),
-                    'defaults' => $fields->preProcess()->values()->all(),
+                    'meta' => $metaFields->meta(),
+                    'defaults' => $defaults,
                 ];
             })->values()->all(),
 
             // Per-node field meta (Grid row metas, resolved relational titles/
             // thumbnails, ...), keyed by node id, computed from each node's
-            // actual saved values. The CP's scoped node container reads this so
+            // actual publish values. The CP's scoped node container reads this so
             // container-managed fieldtypes bind real data instead of the empty
             // type-level defaults. fetchNodeMeta() covers nodes added later.
             'nodeMeta' => $this->preloadNodeMeta(),
@@ -151,11 +159,11 @@ class Weave extends Fieldtype
         return $meta;
     }
 
-    // Fieldtype::meta() (Grid row metas keyed by row _id, resolved relational
-    // titles/thumbnails, ...) needs the node's values in publish (preProcessed)
-    // shape — Grid's `existing` map keys off the rows' _id, which only exists
-    // after preProcess. Pre-processing is idempotent (existing _ids are kept),
-    // so this is safe when the caller's value was already preProcessed.
+    // Both preload() and the CP refresh endpoint receive publish-format props.
+    // Use those values directly: Grid::preProcess() consumes the stored `id`
+    // and generates a fresh `_id` when run again on a published row. Doing it
+    // here disconnects `existing` metadata from the rows being edited,
+    // including assets and nested grids inside them.
     public static function metaForNode(string $type, array $props): array
     {
         $block = BlockRegistry::find($type);
@@ -164,17 +172,10 @@ class Weave extends Fieldtype
             return [];
         }
 
-        $fields = Blueprint::make()
-            ->setContents(['fields' => $block->finalPropsSchema()])
-            ->fields()
-            ->addValues($props);
-
-        $preProcessed = $fields->preProcess()->values()->all();
-
         return Blueprint::make()
             ->setContents(['fields' => $block->finalPropsSchema()])
             ->fields()
-            ->addValues($preProcessed)
+            ->addValues($props)
             ->meta()
             ->all();
     }

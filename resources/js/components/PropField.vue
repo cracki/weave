@@ -203,9 +203,9 @@ export default {
     border-color: var(--color-gray-700, #3f3f46);
 }
 
-/* The modal toolbar replaces Grid's trailing Add Row button. Keep all row
-   controls (including duplicate, delete, and reorder) in the native editor. */
-.weave-repeater-editor section > button:last-child {
+/* Only the outer Grid uses the modal toolbar. Nested grids still need their
+   native Add Row buttons, especially when they have no rows yet. */
+.weave-repeater-editor > .vue-portal-target > div > section > button:last-child {
     display: none;
 }
 </style>
