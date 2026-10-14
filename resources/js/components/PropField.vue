@@ -13,15 +13,17 @@
                                 icon="plus"
                                 icon-only
                                 size="sm"
-                                variant="ghost"
+                                variant="default"
                                 :disabled="!canAddRow(fieldtypeComponentProps)"
                                 @click="openRows(true)"
                             />
                             <Button
                                 v-tooltip="__('Manage rows')"
-                                :text="__('Manage rows')"
+                                :aria-label="__('Manage rows')"
+                                icon="sliders-horizontal"
+                                icon-only
                                 size="sm"
-                                variant="ghost"
+                                variant="default"
                                 @click="openRows()"
                             />
                         </div>
@@ -32,11 +34,12 @@
                     </p>
                     <Modal
                         v-model:open="rowsOpen"
-                        :title="__(field.display || field.handle)"
                         class="weave-repeater-modal"
                         @opened="addPendingRow"
                     >
-                        <div class="mb-3 flex justify-end">
+                        <div class="weave-repeater-header">
+                            <ModalTitle class="text-sm font-semibold">{{ __(field.display || field.handle) }}</ModalTitle>
+                            <div class="flex items-center gap-2">
                             <Button
                                 v-tooltip="__('Add Row')"
                                 :aria-label="__('Add Row')"
@@ -47,8 +50,18 @@
                                 :disabled="!canAddRow(fieldtypeComponentProps)"
                                 @click="addRow"
                             />
+                            <Button
+                                v-tooltip="__('Close')"
+                                :aria-label="__('Close')"
+                                icon="x"
+                                icon-only
+                                size="sm"
+                                variant="default"
+                                @click="rowsOpen = false"
+                            />
+                            </div>
                         </div>
-                        <div class="weave-repeater-editor">
+                        <div class="weave-scroll weave-repeater-editor">
                             <component
                                 :is="fieldtypeComponent"
                                 ref="grid"
@@ -57,7 +70,9 @@
                             />
                         </div>
                         <template #footer>
+                            <div class="weave-repeater-footer">
                             <Button :text="__('Done')" variant="primary" @click="rowsOpen = false" />
+                            </div>
                         </template>
                     </Modal>
                 </div>
@@ -67,7 +82,7 @@
 </template>
 
 <script>
-import { Button, Modal, PublishField, PublishFieldsProvider } from '@statamic/cms/ui';
+import { Button, Modal, ModalTitle, PublishField, PublishFieldsProvider } from '@statamic/cms/ui';
 
 // One field row — rendered from three places (content fields, each collapsible
 // style section, ungrouped).
@@ -83,7 +98,7 @@ export default {
         field: { type: Object, required: true },
     },
 
-    components: { Button, Modal, PublishField, PublishFieldsProvider },
+    components: { Button, Modal, ModalTitle, PublishField, PublishFieldsProvider },
 
     data() {
         return { rowsOpen: false, pendingAdd: false };
@@ -125,6 +140,65 @@ export default {
 .weave-repeater-modal {
     width: min(64rem, calc(100vw - 2rem));
     max-width: 64rem;
+    max-height: 84vh;
+    top: 8vh;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--color-white, #fff);
+}
+
+/* Modal's default inner card is replaced with one continuous dialog surface. */
+.weave-repeater-modal > div:first-child {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: none;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.weave-repeater-modal > div:first-child > * {
+    margin-block: 0;
+}
+
+.weave-repeater-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--color-gray-200, #e4e4e7);
+}
+
+.weave-repeater-editor {
+    padding: 20px;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+.weave-repeater-footer {
+    display: flex;
+    justify-content: flex-end;
+    flex-shrink: 0;
+    padding: 16px 20px;
+    border-top: 1px solid var(--color-gray-200, #e4e4e7);
+}
+
+.dark .weave-repeater-modal {
+    background: var(--color-gray-850, #202024);
+}
+
+.dark .weave-repeater-header,
+.dark .weave-repeater-footer {
+    border-color: var(--color-gray-700, #3f3f46);
 }
 
 /* The modal toolbar replaces Grid's trailing Add Row button. Keep all row

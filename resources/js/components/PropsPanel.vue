@@ -16,12 +16,14 @@
         </div>
 
         <NodeContainer :node="node" :meta="nodeMeta">
-            <div class="space-y-4">
-                <PropField v-for="field in contentFields" :key="field.handle" :field="field" />
+            <div class="weave-props-content">
+                <div v-for="field in contentFields" :key="field.handle" class="weave-props-field">
+                    <PropField :field="field" />
+                </div>
             </div>
 
-            <div v-if="styleSections.length || groups.length" class="mt-5 space-y-1 border-t border-gray-200 pt-3 dark:border-gray-700">
-                <div v-for="section in styleSections" :key="section.title">
+            <div v-if="styleSections.length || groups.length" class="weave-props-sections mt-5 border-t border-gray-200 dark:border-gray-700">
+                <div v-for="section in styleSections" :key="section.title" class="weave-props-section">
                     <button
                         type="button"
                         class="flex w-full items-center gap-1 py-2 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"
@@ -36,7 +38,7 @@
                     </div>
                 </div>
 
-                <div v-if="groups.length">
+                <div v-if="groups.length" class="weave-props-section">
                     <button
                         type="button"
                         class="flex w-full items-center gap-1 py-2 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"
@@ -180,3 +182,24 @@ export default {
     },
 };
 </script>
+
+<style>
+.weave-props-field + .weave-props-field {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-gray-200, #e4e4e7);
+}
+
+.weave-props-section {
+    padding-block: 8px;
+}
+
+.weave-props-section + .weave-props-section {
+    border-top: 1px solid var(--color-gray-200, #e4e4e7);
+}
+
+.dark .weave-props-field + .weave-props-field,
+.dark .weave-props-section + .weave-props-section {
+    border-color: var(--color-gray-700, #3f3f46);
+}
+</style>

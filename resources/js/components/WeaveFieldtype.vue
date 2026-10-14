@@ -32,10 +32,10 @@
 
                 <div class="flex items-center gap-2">
                     <Button
+                        v-if="selectedNode"
                         v-tooltip="__('Properties panel')"
                         :aria-label="__('Properties panel')"
                         :aria-expanded="propsPanelOpen && !!selectedNode"
-                        :disabled="!selectedNode"
                         icon="sliders-horizontal"
                         icon-only
                         size="xs"
@@ -64,8 +64,14 @@
                 />
             </div>
 
-            <div v-if="fullScreenMode" class="flex flex-1 gap-1 min-h-0">
-                <div v-show="blocksPanelOpen" class="weave-scroll weave-blocks-drawer shrink-0 overflow-y-auto">
+            <div v-if="fullScreenMode" class="weave-editor-layout flex flex-1 min-h-0">
+                <div
+                    class="weave-blocks-drawer shrink-0"
+                    :class="{ 'is-closed': !blocksPanelOpen }"
+                    :inert="!blocksPanelOpen"
+                    :aria-hidden="!blocksPanelOpen"
+                >
+                    <div class="weave-scroll weave-blocks-drawer-content">
                     <blocks-panel
                         ref="blocksPanel"
                         :blocks="blocks"
@@ -76,11 +82,12 @@
                         @duplicate="duplicateBlock"
                         @add="addBlock"
                     />
+                    </div>
                 </div>
 
                 <div class="relative flex flex-1 gap-1 min-w-0">
                     <div class="flex-1 min-w-0 overflow-auto rounded-md bg-gray-200 dark:bg-gray-950">
-                        <div class="mx-auto h-full transition-all" :style="{ width: viewportWidth }">
+                        <div class="weave-viewport mx-auto h-full" :style="{ width: viewportWidth }">
                             <canvas-frame
                                 :blocks="blocks"
                                 :selected-id="selectedBlockId"
@@ -95,6 +102,7 @@
                         </div>
                     </div>
 
+                    <Transition name="weave-props">
                     <div
                         v-if="selectedNode"
                         v-show="propsPanelOpen"
@@ -116,6 +124,7 @@
                             @meta-stale="fetchNodeMeta(selectedBlockId)"
                         />
                     </div>
+                    </Transition>
                 </div>
             </div>
 
@@ -411,15 +420,64 @@ export default {
 }
 
 .weave-blocks-drawer {
-    width: min(18rem, 35vw);
+    width: var(--weave-drawer-width);
+    margin-right: 4px;
+    overflow: hidden;
+    transition: width var(--weave-panel-motion), margin-right var(--weave-panel-motion);
+}
+
+.weave-editor-layout {
+    --weave-drawer-width: min(18rem, 35vw);
+    --weave-panel-motion: 240ms cubic-bezier(0.22, 1, 0.36, 1);
+    overflow: hidden;
+}
+
+.weave-blocks-drawer-content {
+    width: var(--weave-drawer-width);
+    height: 100%;
+    overflow-y: auto;
+    transition: transform var(--weave-panel-motion), opacity var(--weave-panel-motion);
+}
+
+.weave-blocks-drawer.is-closed {
+    width: 0;
+    margin-right: 0;
+}
+
+.weave-blocks-drawer.is-closed .weave-blocks-drawer-content {
+    transform: translateX(-100%);
+    opacity: 0;
+}
+
+.weave-viewport {
+    transition: width var(--weave-panel-motion);
 }
 
 .weave-props-panel {
-    width: min(20rem, 100%);
-    max-height: 100%;
+    top: 8px;
+    right: 8px;
+    width: min(20rem, calc(100% - 16px));
+    max-height: calc(100% - 16px);
     z-index: 1;
     border-radius: 0.5rem;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+}
+
+.weave-props-enter-active,
+.weave-props-leave-active {
+    transition: transform var(--weave-panel-motion), opacity var(--weave-panel-motion);
+}
+
+.weave-props-enter-from,
+.weave-props-leave-to {
+    transform: translateX(calc(100% + 8px));
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .weave-editor-layout {
+        --weave-panel-motion: 0ms linear;
+    }
 }
 
 .weave-scroll::-webkit-scrollbar {
