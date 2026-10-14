@@ -1,12 +1,23 @@
 <template>
-    <div class="sortable-item">
+    <div>
         <div
+            data-weave-block-row
             class="group flex items-center gap-1 rounded px-1 py-1 cursor-pointer"
             :class="selectedId === node.id ? 'bg-sky-50 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800'"
             :style="{ paddingLeft: depth * 14 + 4 + 'px' }"
             @click="$emit('select', node.id)"
         >
-            <DragHandle class="sortable-handle shrink-0 opacity-0 group-hover:opacity-100" @click.stop />
+            <span
+                :draggable="!node.locked"
+                :class="node.locked ? 'cursor-not-allowed opacity-30' : 'cursor-grab opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'"
+                class="shrink-0"
+                :title="node.locked ? 'Position locked' : 'Drag to move'"
+                @click.stop
+                @dragstart.stop="$emit('drag-start', $event, node)"
+                @dragend.stop="$emit('drag-end')"
+            >
+                <DragHandle type="button" :disabled="!!node.locked" :class="{ 'cursor-not-allowed': node.locked }" />
+            </span>
 
             <Button
                 v-if="node.children"
@@ -25,38 +36,37 @@
             <span v-if="preview" class="min-w-0 flex-1 truncate text-xs text-gray-400">{{ preview }}</span>
             <span v-else class="flex-1" />
 
-            <div class="flex shrink-0 items-center opacity-0 group-hover:opacity-100">
-                <Button icon="duplicate" icon-only size="2xs" variant="ghost" @click.stop="$emit('duplicate', node.id)" />
-                <Button icon="trash" icon-only size="2xs" variant="ghost" @click.stop="$emit('remove', node.id)" />
+            <div class="flex shrink-0 items-center" :class="node.locked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'">
+                <Button
+                    :icon="node.locked ? 'padlock-locked' : 'padlock-unlocked'"
+                    :aria-label="node.locked ? 'Unlock position' : 'Lock position'"
+                    :title="node.locked ? 'Unlock position' : 'Lock position'"
+                    :aria-pressed="!!node.locked"
+                    icon-only size="2xs" variant="ghost"
+                    @click.stop="node.locked = !node.locked"
+                />
+                <Button icon="duplicate" aria-label="Duplicate block" icon-only size="2xs" variant="ghost" @click.stop="$emit('duplicate', node.id)" />
+                <Button icon="trash" aria-label="Delete block" icon-only size="2xs" variant="ghost" @click.stop="$emit('remove', node.id)" />
             </div>
         </div>
 
         <div v-if="node.children && !collapsed" class="border-l border-gray-200 dark:border-gray-700" :style="{ marginLeft: depth * 14 + 11 + 'px' }">
-            <SortableList
-                :model-value="node.children"
-                vertical
-                :animate="false"
-                item-class="sortable-item"
-                handle-class="sortable-handle"
-                @update:model-value="reorderChildren"
-            >
-                <template #default="{ items }">
-                    <div>
-                        <BlockNode
-                            v-for="child in items"
-                            :key="child.id"
-                            :node="child"
-                            :depth="depth + 1"
-                            :block-types="blockTypes"
-                            :selected-id="selectedId"
-                            @select="$emit('select', $event)"
-                            @remove="$emit('remove', $event)"
-                            @duplicate="$emit('duplicate', $event)"
-                            @add="$emit('add', $event)"
-                        />
-                    </div>
+            <BlockList :blocks="node.children">
+                <template #default="{ node: child, startDrag, resetDrag }">
+                    <BlockNode
+                        :node="child"
+                        :depth="depth + 1"
+                        :block-types="blockTypes"
+                        :selected-id="selectedId"
+                        @select="$emit('select', $event)"
+                        @remove="$emit('remove', $event)"
+                        @duplicate="$emit('duplicate', $event)"
+                        @add="$emit('add', $event)"
+                        @drag-start="startDrag"
+                        @drag-end="resetDrag"
+                    />
                 </template>
-            </SortableList>
+            </BlockList>
 
             <button
                 type="button"
@@ -71,8 +81,8 @@
 </template>
 
 <script>
-import { SortableList } from '@statamic/cms';
 import { Button, DragHandle, Icon } from '@statamic/cms/ui';
+import BlockList from './BlockList.vue';
 
 // Handles a node's props are searched, in order, for the first non-empty
 // string/rich-text value to show as an inline preview next to the block's label.
@@ -88,7 +98,7 @@ function plainText(value) {
 export default {
     name: 'BlockNode',
 
-    components: { SortableList, Button, DragHandle, Icon },
+    components: { BlockList, Button, DragHandle, Icon },
 
     props: {
         node: { type: Object, required: true },
@@ -97,7 +107,7 @@ export default {
         depth: { type: Number, default: 0 },
     },
 
-    emits: ['select', 'remove', 'duplicate', 'add'],
+    emits: ['select', 'remove', 'duplicate', 'add', 'drag-start', 'drag-end'],
 
     data() {
         return { collapsed: true };
@@ -135,10 +145,6 @@ export default {
     },
 
     methods: {
-        reorderChildren(items) {
-            this.node.children.splice(0, this.node.children.length, ...items);
-        },
-
         addChild() {
             this.collapsed = false;
             this.$emit('add', this.node.id);

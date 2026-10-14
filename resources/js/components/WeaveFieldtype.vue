@@ -164,6 +164,7 @@ import PropsPanel from './PropsPanel.vue';
 import { findNodeById, containingArray, reassignIds } from '../lib/tree';
 import { columnsForPreset } from '../lib/columns';
 import { resolveCanvasField } from '../lib/canvas-target';
+import { reorderNodes } from '../lib/reorder';
 
 export default {
     mixins: [Fieldtype],
@@ -285,7 +286,7 @@ export default {
         },
 
         onEscKey(e) {
-            if (e.key !== 'Escape' || document.querySelector('.weave-repeater-modal')) return;
+            if (e.key !== 'Escape' || document.querySelector('.weave-repeater-modal, .weave-block-picker')) return;
             if (this.contextMenu) {
                 this.contextMenu = null;
                 return;
@@ -327,10 +328,9 @@ export default {
         },
 
         reorderBlocks(ids) {
+            if (!Array.isArray(ids) || !ids.length) return;
             const siblings = containingArray(this.blocks, ids[0]) || this.blocks;
-            const byId = Object.fromEntries(siblings.map((n) => [n.id, n]));
-            const reordered = ids.map((id) => byId[id]).filter(Boolean);
-            siblings.splice(0, siblings.length, ...reordered);
+            reorderNodes(siblings, ids.map(id => ({ id })));
         },
 
         removeBlock(id) {
@@ -382,6 +382,7 @@ export default {
             const siblings = containingArray(this.blocks, id);
             const index = siblings ? siblings.findIndex((n) => n.id === id) : -1;
             if (index === -1) return;
+            if (siblings[index].locked || siblings.slice(index + 1).some(node => node.locked)) return;
 
             const [node] = siblings.splice(index, 1);
             target.children = target.children || [];
