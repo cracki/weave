@@ -272,6 +272,26 @@ inside the CP canvas by design (`nodes.blade.php` only emits the attribute
 when `! $editing`) — the canvas re-renders on every edit, which would replay
 them constantly.
 
+### Editing directly on the canvas
+
+The canvas context menu offers **Edit in Properties** (opens and focuses the
+properties panel) and **Edit Here** (opens a small dialog). The dialog stages
+changes until **Done**; Cancel, Escape, and closing it discard the draft.
+Grid and Replicator rows show only the clicked row's fields, including nested rows.
+
+In custom Blade views, mark each rendered row with its augmented `id` so images,
+empty rows, and repeated labels select the exact item at any depth:
+
+```blade
+<div @if ($editing) data-weave-row="{{ $row['id'] }}" @endif>
+    {{ $row['label'] }}
+</div>
+```
+
+For a specific field, `data-weave-field="title"` or a dotted path such as
+`data-weave-field="links.0.children.1.label"` also identifies the edit target.
+Unmarked custom views fall back to semantic and unambiguous text matching.
+
 ## Development
 
 Inside the addon's own checkout (not the host app):

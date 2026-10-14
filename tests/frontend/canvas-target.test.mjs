@@ -56,7 +56,7 @@ test('nested canvas targets retain the child block and reject ancestor field mar
     const span = {
         textContent: 'Child title', parentElement: heading,
         closest: (selector) => selector === '[data-weave-id]' ? block
-            : selector.startsWith('[data-weave-field]') ? ancestor : heading,
+            : selector.startsWith('[data-weave-field]') ? ancestor : selector === '[data-weave-row]' ? null : heading,
     };
     handler({ target: span, preventDefault() {}, clientX: 30, clientY: 40 });
     assert.equal(message.id, 'child');
@@ -89,7 +89,7 @@ test('Canvas forwards field context only from its own iframe', () => {
 
 test('Edit selects the right-clicked block and reopens its properties panel', () => {
     const component = loadComponent('WeaveFieldtype.vue', {
-        Fieldtype: {}, Button: {}, BlocksPanel: {}, CanvasFrame: {}, ContextMenu: {}, PropsPanel: {},
+        Fieldtype: {}, Button: {}, BlocksPanel: {}, CanvasFrame: {}, ContextMenu: {}, PropsPanel: {}, InlineEditDialog: {},
         debounce: (fn) => fn, resolveCanvasField,
         findNodeById: (nodes, id) => nodes.find((node) => node.id === id),
     });

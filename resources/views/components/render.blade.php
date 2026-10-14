@@ -36,6 +36,8 @@
             e.preventDefault();
             var fieldEl = e.target.closest('[data-weave-field], [data-weave-prop]');
             if (fieldEl && fieldEl.closest('[data-weave-id]') !== el) fieldEl = null;
+            var rowEl = e.target.closest('[data-weave-row]');
+            if (rowEl && rowEl.closest('[data-weave-id]') !== el) rowEl = null;
             var semanticEl = e.target.closest('h1, h2, h3, h4, h5, h6, a, button, img, figcaption, blockquote, p, [data-weave-text]');
             if (semanticEl && semanticEl.closest('[data-weave-id]') !== el) semanticEl = null;
             var tag = semanticEl ? semanticEl.tagName.toLowerCase() : '';
@@ -55,6 +57,7 @@
                 type: 'block:contextmenu',
                 id: el.getAttribute('data-weave-id'),
                 target: {
+                    row: rowEl ? rowEl.getAttribute('data-weave-row') : null,
                     field: fieldEl ? (fieldEl.getAttribute('data-weave-field') || fieldEl.getAttribute('data-weave-prop')) : null,
                     kind: kind,
                     texts: texts,

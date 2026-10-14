@@ -149,6 +149,12 @@
             @action="onContextAction"
             @close="contextMenu = null"
         />
+        <InlineEditDialog
+            v-if="inlineEdit"
+            :edit="inlineEdit"
+            @close="inlineEdit = null"
+            @done="commitInlineEdit"
+        />
     </div>
     </Teleport>
 </template>
@@ -161,15 +167,17 @@ import BlocksPanel from './BlocksPanel.vue';
 import CanvasFrame from './Canvas.vue';
 import ContextMenu from './ContextMenu.vue';
 import PropsPanel from './PropsPanel.vue';
+import InlineEditDialog from './InlineEditDialog.vue';
 import { findNodeById, containingArray, reassignIds } from '../lib/tree';
-import { columnsForPreset } from '../lib/columns';
+import { columnsForPreset, resizeColumnsForPreset } from '../lib/columns';
 import { resolveCanvasField } from '../lib/canvas-target';
+import { resolveInlineScope, applyInlineEdit } from '../lib/inline-edit';
 import { reorderNodes } from '../lib/reorder';
 
 export default {
     mixins: [Fieldtype],
 
-    components: { Button, BlocksPanel, CanvasFrame, ContextMenu, PropsPanel },
+    components: { Button, BlocksPanel, CanvasFrame, ContextMenu, PropsPanel, InlineEditDialog },
 
     data() {
         return {
@@ -186,6 +194,8 @@ export default {
             nodeMeta: clone(this.meta?.nodeMeta ?? {}),
             clipboard: null,
             contextMenu: null,
+            inlineEdit: null,
+            inlineEditRequest: 0,
             fieldFocusTarget: null,
             viewport: 'desktop',
             viewportPresets: [
@@ -211,7 +221,8 @@ export default {
 
         contextMenuItems() {
             return [
-                { action: 'edit', icon: 'pencil', label: __('Edit') },
+                { action: 'edit', icon: 'sliders-horizontal', label: __('Edit in Properties') },
+                { action: 'edit-here', icon: 'pencil', label: __('Edit Here') },
                 { action: 'duplicate', icon: 'duplicate', label: 'Duplicate' },
                 { action: 'copy', icon: 'clipboard', label: 'Copy' },
                 { action: 'paste', icon: 'clipboard-check', label: 'Paste', disabled: ! this.clipboard },
@@ -258,27 +269,25 @@ export default {
             const node = findNodeById(this.blocks, id);
             if (! node) return;
 
-            const token = document.querySelector('meta[name="csrf-token"]')?.content;
+            const token = Statamic.$config.get('csrfToken');
 
-            const response = await fetch(cp_url('weave/field-meta'), {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': token,
-                },
-                body: JSON.stringify({ type: node.type, props: node.props }),
-            });
-
-            if (! response.ok) {
-                // Don't leave the panel gated forever on a failed fetch — fall
-                // back to the type-level meta so fields still render.
-                this.nodeMeta[id] = {};
-                return;
+            try {
+                const response = await fetch(cp_url('weave/field-meta'), {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': token,
+                    },
+                    body: JSON.stringify({ type: node.type, props: node.props }),
+                });
+                if (!response.ok) throw new Error('Unable to load field metadata');
+                const { meta } = await response.json();
+                this.nodeMeta[id] = meta;
+            } catch {
+                // Preserve existing relationship/row metadata if a refresh fails.
+                this.nodeMeta[id] ??= {};
             }
-
-            const { meta } = await response.json();
-            this.nodeMeta[id] = meta;
         },
 
         toggleFullscreen() {
@@ -286,7 +295,7 @@ export default {
         },
 
         onEscKey(e) {
-            if (e.key !== 'Escape' || document.querySelector('.weave-repeater-modal, .weave-block-picker')) return;
+            if (e.key !== 'Escape' || this.inlineEdit || document.querySelector('.weave-repeater-modal, .weave-block-picker')) return;
             if (this.contextMenu) {
                 this.contextMenu = null;
                 return;
@@ -400,6 +409,34 @@ export default {
             this.contextMenu = { id, target, x, y };
         },
 
+        async openInlineEdit(id, target = {}) {
+            const request = ++this.inlineEditRequest;
+            if (!this.nodeMeta[id]) await this.fetchNodeMeta(id);
+            if (request !== this.inlineEditRequest || !this.fullScreenMode) return;
+            const node = findNodeById(this.blocks, id);
+            if (!node) return;
+            const definition = this.blockTypesMeta.find((block) => block.type === node.type);
+            const scope = resolveInlineScope(node, definition?.fields || [], target, this.nodeMeta[id]);
+            if (!scope?.fields.length) return;
+            this.inlineEdit = {
+                id, target: scope.rowId ? { row: scope.rowId } : clone(target), rowId: scope.rowId,
+                fields: scope.fields, values: clone(scope.values), meta: clone(scope.meta),
+                title: !scope.path.length && scope.fields.length !== 1 ? definition?.label || node.type : scope.title,
+            };
+        },
+
+        commitInlineEdit(edit) {
+            const node = findNodeById(this.blocks, edit.id);
+            const fields = this.blockTypesMeta.find((block) => block.type === node?.type)?.fields || [];
+            if (node && applyInlineEdit(node, fields, this.nodeMeta[edit.id], edit)) {
+                if (node.type === 'columns' && edit.fields.some((field) => field.handle === 'preset')) {
+                    node.children = resizeColumnsForPreset(node.children || [], node.props.preset);
+                }
+                this.fetchNodeMeta(edit.id);
+            }
+            this.inlineEdit = null;
+        },
+
         onContextAction(action) {
             const { id, target } = this.contextMenu;
             this.contextMenu = null;
@@ -411,8 +448,10 @@ export default {
                 this.selectedBlockId = id;
                 this.propsPanelOpen = true;
                 // A fresh object also refocuses when editing the same field twice.
-                this.fieldFocusTarget = { id, field: resolveCanvasField(node, fields, target) };
+                const rowScope = target?.row ? resolveInlineScope(node, fields, target) : null;
+                this.fieldFocusTarget = { id, field: rowScope?.path[0] || resolveCanvasField(node, fields, target) };
             }
+            if (action === 'edit-here') this.openInlineEdit(id, target);
             if (action === 'duplicate') this.duplicateBlock(id);
             if (action === 'copy') this.copyBlock(id);
             if (action === 'paste') this.pasteBlock(id);

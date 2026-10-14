@@ -1,7 +1,7 @@
-@props(['props' => []])
+@props(['props' => [], 'editing' => false])
 
-<x-hero :lines="$props['lines'] ?? []" :background="$props['background']?->url()">
+<x-weave::hero :lines="$props['lines'] ?? []" :background="($props['background'] ?? null)?->url()">
     @foreach ($props['buttons'] ?? [] as $btn)
-        <x-button :variant="$btn['variant'] ?? 'light'" :href="$btn['href'] ?? '#'">{{ $btn['label'] ?? '' }}</x-button>
+        <x-weave::button :data-weave-row="$editing ? ($btn['id'] ?? null) : null" :variant="$btn['variant'] ?? 'light'" :href="$btn['href'] ?? '#'">{{ $btn['label'] ?? '' }}</x-weave::button>
     @endforeach
-</x-hero>
+</x-weave::hero>

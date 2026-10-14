@@ -1,3 +1,3 @@
-@props(['props' => []])
+@props(['props' => [], 'editing' => false])
 
-<x-testimonial-carousel :quotes="$props['quotes'] ?? []" />
+<x-weave::testimonial-carousel :quotes="$props['quotes'] ?? []" :editing="$editing" />
