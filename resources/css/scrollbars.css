@@ -4,6 +4,7 @@
     .weave-fieldtype, .weave-fieldtype *,
     .weave-repeater-modal, .weave-repeater-modal *,
     .weave-block-picker, .weave-block-picker *,
+    .weave-asset-browser-modal, .weave-asset-browser-modal *,
     .weave-scroll, .weave-scroll *
 ) {
     scrollbar-width: thin;

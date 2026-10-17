@@ -30,7 +30,7 @@ test('dialog text controls grow without changing field types, validation, condit
     assert.equal(result[4].component, 'weave-modal-grid');
     assert.equal(result[4].fields[0].component, 'weave-elastic-text');
     assert.equal(result[4].fields[0].width, 50);
-    assert.equal(result[5].component, 'assets');
+    assert.equal(result[5].component, 'weave-modal-assets');
     assert.deepEqual(fields, original);
 });
 

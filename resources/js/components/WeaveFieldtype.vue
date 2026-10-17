@@ -305,7 +305,7 @@ export default {
         },
 
         onEscKey(e) {
-            if (e.key !== 'Escape' || this.inlineEdit || document.querySelector('.weave-repeater-modal, .weave-block-picker')) return;
+            if (e.key !== 'Escape' || this.inlineEdit || document.querySelector('.weave-repeater-modal, .weave-block-picker, .weave-asset-browser-modal')) return;
             if (this.contextMenu) {
                 this.contextMenu = null;
                 return;

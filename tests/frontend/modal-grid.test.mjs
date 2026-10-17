@@ -22,12 +22,23 @@ test('Grid editors are modal at every depth, with conditions and unrelated field
     assert.equal(config.fullscreen, false);
     assert.equal(config.fields[0].component, 'weave-modal-grid');
     assert.deepEqual(config.fields[0].if, original.fields[0].if);
-    assert.deepEqual(config.fields[0].fields[0], original.fields[0].fields[0]);
+    assert.deepEqual(config.fields[0].fields[0], { ...original.fields[0].fields[0], component: 'weave-modal-assets' });
     const inSet = config.fields[0].fields[1].sets.group.sets.item.fields[0].field;
     assert.equal(inSet.component, 'weave-modal-grid');
     assert.equal(inSet.fullscreen, false);
     assert.equal(original.component, 'grid');
     assert.equal(original.fields[0].component, undefined);
+});
+
+test('asset browser routing preserves upload limits, conditions, metadata configuration and custom fields', () => {
+    const original = [
+        { type: 'assets', container: 'images', max_files: 1, allow_uploads: false, query_scopes: ['images'], if: { enabled: 'equals true' } },
+        { type: 'assets', component: 'custom-assets', max_files: 3 },
+    ];
+    const config = modalGridConfig(original);
+    assert.deepEqual(config[0], { ...original[0], component: 'weave-modal-assets' });
+    assert.deepEqual(config[1], original[1]);
+    assert.equal(original[0].component, undefined);
 });
 
 function loadModalGrid() {
