@@ -1,0 +1,30 @@
+/* Shared default for Weave panels, portaled dialogs and their descendants.
+   New scroll containers inherit this styling without a per-element class. */
+:where(
+    .weave-fieldtype, .weave-fieldtype *,
+    .weave-repeater-modal, .weave-repeater-modal *,
+    .weave-block-picker, .weave-block-picker *,
+    .weave-scroll, .weave-scroll *
+) {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(120, 120, 130, 0.5) transparent;
+
+    &::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    &::-webkit-scrollbar-track,
+    &::-webkit-scrollbar-corner {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background-color: rgba(120, 120, 130, 0.5);
+        border-radius: 9999px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        background-color: rgba(120, 120, 130, 0.75);
+    }
+}

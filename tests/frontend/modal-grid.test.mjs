@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import * as Vue from 'vue';
 import { compile } from '@vue/compiler-dom';
 import { modalGridConfig } from '../../resources/js/lib/modal-grid.js';
+import { repeaterLayout, setRepeaterLayout } from '../../resources/js/lib/repeater-layout.js';
 
 test('Grid editors are modal at every depth, with conditions and unrelated fields intact', () => {
     const original = {
@@ -35,6 +36,8 @@ function loadModalGrid() {
         .replace(/^import .*;$/gm, '').replace('export default', 'globalThis.component =');
     const fieldProps = Object.fromEntries(['value', 'config', 'handle', 'meta', 'readOnly', 'showFieldPreviews', 'namePrefix', 'fieldPathPrefix', 'metaPathPrefix', 'id'].map(key => [key, {}]));
     const context = {
+        markRaw: Vue.markRaw, resolveComponent: Vue.resolveComponent,
+        RepeaterRows: {}, repeaterLayout, setRepeaterLayout,
         autoDirection: {},
         Button: { props: ['disabled'], render() { return Vue.h('button', { disabled: this.disabled }, this.$slots.default?.()); } },
         ModalTitle: { render() { return Vue.h('h2', this.$slots.default?.()); } },
@@ -96,6 +99,7 @@ function harness(props) {
     app.directive('tooltip', {});
     app.component('weave-modal-grid-fieldtype', component);
     app.component('grid-fieldtype', {
+        components: { GridStacked: {} },
         props: ['value', 'meta', 'config', 'handle', 'fieldPathPrefix', 'metaPathPrefix', 'readOnly', 'id', 'namePrefix'],
         emits: ['update:value', 'update:meta'],
         computed: { canAddRows() { return !this.readOnly; } },
@@ -128,6 +132,7 @@ test('the modal forwards scoped props and native row metadata/value updates', as
     const grid = state.nativeGrids[0];
     assert.equal(grid.config.fullscreen, false);
     assert.equal(grid.config.component, 'grid');
+    assert.equal(grid.config.mode, 'stacked');
     assert.equal(grid.fieldPathPrefix, 'links.0');
     assert.equal(grid.metaPathPrefix, 'links.existing.parent');
     assert.equal(Vue.toRaw(grid.value), value);
@@ -164,6 +169,13 @@ test('nested grids open independent modals and closing a child leaves the parent
     await Vue.nextTick();
     assert.equal(state.instance.rowsOpen, true);
     assert.equal(childVm.rowsOpen, false);
+    childVm.setLayout('accordion');
+    await Vue.nextTick();
+    assert.equal(state.instance.layout, 'accordion');
+    assert.equal(childVm.layout, 'accordion');
+    state.instance.setLayout('split');
+    await Vue.nextTick();
+    assert.equal(childVm.layout, 'split');
     state.app.unmount();
 });
 
@@ -179,4 +191,21 @@ test('read-only and max-row limits prevent modal add actions', () => {
         assert.equal(state.events.length, 0);
         state.app.unmount();
     }
+});
+
+test('layout tabs support keyboard selection, wrapping and Home/End without editing row values', () => {
+    const state = harness({ handle: 'rows', value: [], meta: { existing: {} }, config: { type: 'grid' } });
+    const focused = [];
+    try {
+        for (const [key, expected, index] of [['End', 'accordion', 1], ['ArrowRight', 'split', 0], ['ArrowLeft', 'accordion', 1], ['Home', 'split', 0]]) {
+            let prevented = false;
+            state.instance.onLayoutKeydown({ key, preventDefault() { prevented = true; }, currentTarget: {
+                querySelectorAll: () => [0, 1].map(index => ({ focus: () => focused.push(index) })),
+            } });
+            assert.equal(prevented, true);
+            assert.equal(state.instance.layout, expected);
+            assert.equal(focused.at(-1), index);
+        }
+        assert.equal(state.events.length, 0);
+    } finally { state.app.unmount(); }
 });

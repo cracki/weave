@@ -1,3 +1,4 @@
+import '../css/scrollbars.css';
 import WeaveFieldtype from './components/WeaveFieldtype.vue';
 import ModalGridFieldtype from './components/ModalGridFieldtype.vue';
 import ElasticTextFieldtype from './components/ElasticTextFieldtype.vue';

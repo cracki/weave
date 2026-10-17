@@ -484,16 +484,6 @@ export default {
     transform: scaleX(-1);
 }
 
-/* Global (not scoped): also used inside BlocksPanel.vue's own template (Add block picker),
-   a child component — Vue scoped CSS doesn't cross into child components' templates.
-   Statamic's own CP CSS has no rule for these panels' native scrollbar (this addon
-   ships no Tailwind build — see vite.config.js), so it falls back to a chunky default
-   browser scrollbar. Style it directly instead. */
-.weave-scroll {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(120, 120, 130, 0.5) transparent;
-}
-
 .weave-blocks-drawer {
     width: var(--weave-drawer-width);
     margin-inline-end: 4px;
@@ -571,23 +561,6 @@ export default {
     .weave-props-panel {
         --weave-props-resize-motion: 0ms linear;
     }
-}
-
-.weave-scroll::-webkit-scrollbar {
-    width: 8px;
-}
-
-.weave-scroll::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.weave-scroll::-webkit-scrollbar-thumb {
-    background-color: rgba(120, 120, 130, 0.5);
-    border-radius: 9999px;
-}
-
-.weave-scroll::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(120, 120, 130, 0.75);
 }
 
 /* Keep portaled field dropdowns above the editor and its row-management modal. */
