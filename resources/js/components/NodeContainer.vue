@@ -46,7 +46,10 @@ export default {
             localizedFields: ref([]),
             meta: computed(() => props.meta),
             site: ref(undefined),
-            direction: computed(() => 'ltr'),
+            // Content direction belongs to each control's own value, not the
+            // UI preference. Native text, textarea, Bard and nested Grid fields
+            // consume this context through useContentDirection().
+            direction: computed(() => 'auto'),
             errors: ref({}),
             readOnly: ref(false),
             previews: ref({}),

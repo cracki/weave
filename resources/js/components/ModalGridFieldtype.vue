@@ -56,7 +56,7 @@
                     />
                 </div>
             </div>
-            <div class="weave-scroll weave-repeater-editor">
+            <div v-auto-direction class="weave-scroll weave-repeater-editor">
                 <grid-fieldtype
                     ref="grid"
                     v-bind="$props"
@@ -80,11 +80,13 @@
 <script>
 import { Fieldtype } from '@statamic/cms';
 import { Button, Modal, ModalTitle } from '@statamic/cms/ui';
+import autoDirection from '../directives/auto-direction';
 
 // Native Grid owns row values, metadata, and row actions. This wrapper only
 // changes where it renders. PublishField supplies the same scoped paths at
 // every depth, including when this component lives inside another modal.
 export default {
+    directives: { autoDirection },
     mixins: [Fieldtype.mixin],
 
     components: { Button, Modal, ModalTitle },

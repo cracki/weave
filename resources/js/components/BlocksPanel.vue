@@ -1,5 +1,5 @@
 <template>
-    <div class="p-3 pr-1.5">
+    <div class="weave-blocks-content p-3">
         <Button text="Add Block" icon="plus" class="mb-3 w-full" @click="openAddPicker(null)" />
 
         <Modal v-model:open="pickerOpen" class="weave-block-picker max-w-3xl" @opened="focusSearch">
@@ -15,6 +15,7 @@
                     ref="search"
                     v-model="searchQuery"
                     type="search"
+                    dir="auto"
                     placeholder="Search by name or category…"
                     class="weave-block-search w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400"
                 />
@@ -57,7 +58,7 @@
                 :aria-expanded="!sectionsCollapsed"
                 @click="sectionsCollapsed = !sectionsCollapsed"
             >
-                <Icon :name="sectionsCollapsed ? 'chevron-right' : 'chevron-down'" class="size-3" />
+                <Icon :name="sectionsCollapsed ? 'chevron-right' : 'chevron-down'" class="weave-disclosure-icon size-3" :class="{ 'is-collapsed': sectionsCollapsed }" />
                 List view
             </button>
 
@@ -157,6 +158,14 @@ export default {
 </script>
 
 <style>
+.weave-blocks-content {
+    padding-inline-end: 6px;
+}
+
+.weave-block-search {
+    text-align: start;
+}
+
 .weave-block-picker {
     width: min(48rem, calc(100vw - 32px));
     max-width: 48rem;

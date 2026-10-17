@@ -125,11 +125,14 @@ test('field navigation expands its section, focuses without scrolling, then scro
     const receiver = {
         styleSections: [{ title: 'Typography', fields: fields('font_size') }], groups: [],
         sectionCollapsed: { Typography: true }, focusTarget: { field: 'font_size' },
-        $el: { closest: () => panel, querySelectorAll: () => [field] },
+        $el: {
+            closest: () => panel, querySelectorAll: () => [field],
+            querySelector: () => ({ getBoundingClientRect: () => ({ height: 56 }) }),
+        },
         $nextTick: async () => { assert.equal(receiver.sectionCollapsed.Typography, false); },
     };
     await component.methods.focusField.call(receiver, 'font_size');
     assert.equal(focusOptions.preventScroll, true);
-    assert.equal(scrollOptions.top, 518);
+    assert.equal(scrollOptions.top, 462);
     assert.equal(scrollOptions.behavior, 'instant');
 });

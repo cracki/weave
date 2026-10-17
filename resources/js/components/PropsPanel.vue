@@ -1,8 +1,34 @@
 <template>
-    <Card>
-        <div class="mb-3 flex items-center justify-between">
-            <span ref="panelTitle" tabindex="-1" class="text-sm font-semibold">{{ blockType ? blockType.label : node.type }}</span>
-            <div class="flex items-center gap-1">
+    <Card inset class="weave-props-card" :data-panel-size="size">
+        <header class="weave-props-header">
+            <span ref="panelTitle" tabindex="-1" class="weave-props-title text-sm font-semibold" :title="blockType ? blockType.label : node.type">{{ blockType ? blockType.label : node.type }}</span>
+            <div class="weave-props-actions">
+                <div
+                    class="weave-props-sizes"
+                    role="radiogroup"
+                    :aria-label="__('Properties panel size')"
+                    :style="{ '--weave-props-active-size': sizePresets.findIndex((preset) => preset.key === size) }"
+                    @keydown="onSizeKeydown"
+                >
+                    <span class="weave-props-size-indicator" aria-hidden="true" />
+                    <button
+                        v-for="preset in sizePresets"
+                        :key="preset.key"
+                        v-tooltip="__(preset.label)"
+                        type="button"
+                        role="radio"
+                        :aria-label="__(preset.label)"
+                        :aria-checked="size === preset.key"
+                        :tabindex="size === preset.key ? 0 : -1"
+                        class="weave-props-size"
+                        @click="$emit('update:size', preset.key)"
+                    >
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                            <rect x="2.5" y="3.5" width="15" height="13" rx="1.5" />
+                            <path :d="`M${preset.divider} 3.5v13`" />
+                        </svg>
+                    </button>
+                </div>
                 <Button
                     v-tooltip="__('Close properties panel')"
                     :aria-label="__('Close properties panel')"
@@ -13,42 +39,47 @@
                     @click="$emit('close')"
                 />
             </div>
-        </div>
+        </header>
 
         <NodeContainer :node="node" :meta="nodeMeta">
-            <div class="weave-props-content">
-                <div v-for="field in contentFields" :key="field.handle" class="weave-props-field">
-                    <PropField :field="field" />
-                </div>
-            </div>
+            <div class="weave-props-body">
+                <section v-if="contentFields.length" class="weave-props-content">
+                    <h3 class="weave-props-content-title">{{ __('Content') }}</h3>
+                    <div class="weave-props-content-fields">
+                        <div v-for="field in contentFields" :key="field.handle" class="weave-props-field" :class="{ 'weave-props-field-full': needsFullWidth(field) }">
+                            <PropField :field="field" />
+                        </div>
+                    </div>
+                </section>
 
-            <div v-if="styleSections.length || groups.length" class="weave-props-sections mt-5 border-t border-gray-200 dark:border-gray-700">
-                <div v-for="section in styleSections" :key="section.title" class="weave-props-section">
+                <section v-for="section in styleSections" :key="section.title" class="weave-props-section">
                     <button
                         type="button"
                         class="flex w-full items-center gap-1 py-2 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"
+                        :aria-expanded="!isSectionCollapsed(section.title)"
                         @click="toggleSection(section.title)"
                     >
-                        <Icon :name="isSectionCollapsed(section.title) ? 'chevron-right' : 'chevron-down'" class="size-3" />
-                        {{ section.title }}
+                        <Icon :name="isSectionCollapsed(section.title) ? 'chevron-right' : 'chevron-down'" class="weave-disclosure-icon size-3" :class="{ 'is-collapsed': isSectionCollapsed(section.title) }" />
+                        {{ __(section.title) }}
                     </button>
 
-                    <div v-if="!isSectionCollapsed(section.title)" class="space-y-4 pb-3">
+                    <div v-if="!isSectionCollapsed(section.title)" class="weave-props-section-fields">
                         <PropField v-for="field in section.fields" :key="field.handle" :field="field" />
                     </div>
-                </div>
+                </section>
 
-                <div v-if="groups.length" class="weave-props-section">
+                <section v-if="groups.length" class="weave-props-section">
                     <button
                         type="button"
                         class="flex w-full items-center gap-1 py-2 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"
+                        :aria-expanded="!isSectionCollapsed('Spacing')"
                         @click="toggleSection('Spacing')"
                     >
-                        <Icon :name="isSectionCollapsed('Spacing') ? 'chevron-right' : 'chevron-down'" class="size-3" />
-                        Spacing
+                        <Icon :name="isSectionCollapsed('Spacing') ? 'chevron-right' : 'chevron-down'" class="weave-disclosure-icon size-3" :class="{ 'is-collapsed': isSectionCollapsed('Spacing') }" />
+                        {{ __('Spacing') }}
                     </button>
 
-                    <div v-if="!isSectionCollapsed('Spacing')" class="space-y-4 pb-3">
+                    <div v-if="!isSectionCollapsed('Spacing')" class="weave-props-section-fields">
                         <div
                             v-for="group in groups"
                             :key="group.name"
@@ -62,7 +93,7 @@
                             />
                         </div>
                     </div>
-                </div>
+                </section>
             </div>
         </NodeContainer>
     </Card>
@@ -101,15 +132,20 @@ export default {
         // Doubles as the NodeContainer's live meta store.
         nodeMeta: { type: Object, default: () => ({}) },
         focusTarget: { type: Object, default: null },
+        size: { type: String, default: 'compact', validator: (value) => ['compact', 'medium', 'wide'].includes(value) },
     },
 
-    emits: ['close', 'meta-stale'],
+    emits: ['close', 'meta-stale', 'update:size'],
 
     data() {
-        // Collapsed by default — this panel lists every generic style field on
-        // every block, and most edits are to the block's own top fields, not
-        // typography/border/spacing/visibility.
-        return { sectionCollapsed: {} };
+        return {
+            sectionCollapsed: {},
+            sizePresets: [
+                { key: 'compact', label: 'Compact properties panel', divider: 13 },
+                { key: 'medium', label: 'Medium properties panel', divider: 10 },
+                { key: 'wide', label: 'Wide properties panel', divider: 7 },
+            ],
+        };
     },
 
     computed: {
@@ -183,6 +219,23 @@ export default {
     },
 
     methods: {
+        needsFullWidth(field) {
+            return ['textarea', 'markdown', 'bard', 'code', 'html', 'grid', 'replicator', 'table', 'assets', 'entries', 'terms', 'users', 'array', 'link'].includes(field.type);
+        },
+
+        onSizeKeydown(event) {
+            const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+            if (!keys.includes(event.key)) return;
+            event.preventDefault();
+            const current = this.sizePresets.findIndex((preset) => preset.key === this.size);
+            const rtl = event.currentTarget.matches(':dir(rtl)');
+            const forward = event.key === 'ArrowDown' || event.key === (rtl ? 'ArrowLeft' : 'ArrowRight');
+            const next = event.key === 'Home' ? 0 : event.key === 'End' ? 2
+                : (current + (forward ? 1 : -1) + 3) % 3;
+            this.$emit('update:size', this.sizePresets[next].key);
+            event.currentTarget.querySelectorAll('[role="radio"]')[next].focus();
+        },
+
         async focusField(handle) {
             const section = this.styleSections.find((section) => section.fields.some((field) => field.handle === handle));
             if (section) this.sectionCollapsed[section.title] = false;
@@ -211,14 +264,15 @@ export default {
             if (panel) {
                 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
                 panel.scrollTo({
-                    top: panel.scrollTop + field.getBoundingClientRect().top - panel.getBoundingClientRect().top - 12,
+                    top: panel.scrollTop + field.getBoundingClientRect().top - panel.getBoundingClientRect().top
+                        - this.$el.querySelector('.weave-props-header').getBoundingClientRect().height - 12,
                     behavior: reducedMotion ? 'instant' : 'smooth',
                 });
             }
         },
 
         isSectionCollapsed(title) {
-            return this.sectionCollapsed[title] !== false;
+            return this.sectionCollapsed[title] ?? (this.size === 'compact');
         },
 
         toggleSection(title) {
@@ -230,22 +284,201 @@ export default {
 </script>
 
 <style>
+.weave-props-card {
+    --weave-size-tab-sign: 1;
+    --weave-props-border: var(--color-gray-200, #e4e4e7);
+    --weave-props-surface: var(--color-white, #fff);
+    min-width: 0;
+}
+
+.weave-props-card:dir(rtl) {
+    --weave-size-tab-sign: -1;
+}
+
+.weave-props-card:not([data-panel-size="compact"]) [data-ui-description] {
+    display: none;
+}
+
+.weave-props-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--weave-props-surface);
+    border-bottom: 1px solid var(--weave-props-border);
+}
+
+.weave-props-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.weave-props-actions,
+.weave-props-sizes {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 4px;
+}
+
+.weave-props-actions {
+    margin-inline-start: auto;
+}
+
+.weave-props-sizes {
+    position: relative;
+    padding: 3px;
+    border-radius: 6px;
+    background: var(--color-gray-100, #f4f4f5);
+}
+
+.weave-props-size-indicator {
+    position: absolute;
+    top: 3px;
+    inset-inline-start: 3px;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    background: var(--weave-props-surface);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+    pointer-events: none;
+    transform: translateX(calc(var(--weave-props-active-size, 0) * 32px * var(--weave-size-tab-sign)));
+    transition: transform var(--weave-props-resize-motion, 280ms cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.weave-props-size {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    color: var(--color-gray-600, #52525b);
+    cursor: pointer;
+}
+
+.weave-props-size svg {
+    width: 20px;
+    height: 20px;
+    transform: scaleX(var(--weave-size-tab-sign));
+}
+
+.weave-props-size:not([aria-checked="true"]):hover {
+    background: var(--weave-props-border);
+}
+
+.weave-props-size[aria-checked="true"] {
+    color: var(--color-gray-900, #18181b);
+}
+
+.weave-props-size:focus-visible {
+    outline: 2px solid var(--color-blue-500, #3b82f6);
+    outline-offset: 2px;
+}
+
+.weave-props-body {
+    display: grid;
+    padding: 16px;
+    gap: 16px 24px;
+}
+
+.weave-props-content,
+.weave-props-field,
+.weave-props-section {
+    min-width: 0;
+}
+
+.weave-props-content-title {
+    display: none;
+    margin-bottom: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-gray-600, #52525b);
+}
+
 .weave-props-field + .weave-props-field {
     margin-top: 16px;
     padding-top: 16px;
-    border-top: 1px solid var(--color-gray-200, #e4e4e7);
+    border-top: 1px solid var(--weave-props-border);
 }
 
 .weave-props-section {
+    padding-top: 8px;
+    border-top: 1px solid var(--weave-props-border);
+}
+
+.weave-props-section-fields {
+    display: grid;
+    gap: 16px;
     padding-block: 8px;
 }
 
-.weave-props-section + .weave-props-section {
-    border-top: 1px solid var(--color-gray-200, #e4e4e7);
+.dark .weave-props-card {
+    --weave-props-border: var(--color-gray-700, #3f3f46);
+    --weave-props-surface: var(--color-gray-850, #202025);
 }
 
-.dark .weave-props-field + .weave-props-field,
-.dark .weave-props-section + .weave-props-section {
-    border-color: var(--color-gray-700, #3f3f46);
+.dark .weave-props-sizes {
+    background: var(--color-gray-900, #18181b);
+}
+
+.dark .weave-props-size,
+.dark .weave-props-content-title {
+    color: var(--color-gray-300, #d4d4d8);
+}
+
+.dark .weave-props-size[aria-checked="true"] {
+    color: var(--color-white, #fff);
+}
+
+/* Reflow according to the available panel space, including narrow editors. */
+@container weave-properties (min-width: 32rem) {
+    .weave-props-card:not([data-panel-size="compact"]) .weave-props-body {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .weave-props-content {
+        grid-column: 1 / -1;
+    }
+
+    .weave-props-content-title {
+        display: block;
+    }
+
+    .weave-props-content-fields {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+        gap: 20px 24px;
+    }
+
+    .weave-props-field + .weave-props-field {
+        margin: 0;
+        padding: 0;
+        border: 0;
+    }
+
+    .weave-props-field-full {
+        grid-column: 1 / -1;
+    }
+}
+
+@container weave-properties (min-width: 48rem) {
+    .weave-props-card[data-panel-size="wide"] .weave-props-body,
+    .weave-props-card[data-panel-size="wide"] .weave-props-content-fields {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .weave-props-size-indicator {
+        transition: none;
+    }
 }
 </style>

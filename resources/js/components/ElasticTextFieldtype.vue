@@ -7,7 +7,7 @@
         :model-value="value == null ? '' : String(value)"
         :id="fieldId"
         :name="name"
-        :dir="contentDirection"
+        dir="auto"
         :read-only="isReadOnly"
         :disabled="config.disabled"
         :limit="config.character_limit || null"
@@ -20,17 +20,13 @@
 
 <script>
 import { Fieldtype } from '@statamic/cms';
-import { Textarea, useContentDirection } from '@statamic/cms/ui';
+import { Textarea } from '@statamic/cms/ui';
 
 // Retain the original field type and validation. Only its dialog control changes;
 // Statamic's elastic textarea handles wrapping, resizing, and character counts.
 export default {
     mixins: [Fieldtype.mixin],
     components: { Textarea },
-    setup() {
-        const { direction } = useContentDirection();
-        return { contentDirection: direction };
-    },
 };
 </script>
 

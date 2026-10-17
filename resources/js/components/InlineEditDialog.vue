@@ -4,7 +4,7 @@
             <ModalTitle class="text-sm font-semibold">{{ __(edit.title) }}</ModalTitle>
             <Button :aria-label="__('Cancel editing')" icon="x" icon-only size="sm" variant="ghost" @click="$emit('close')" />
         </div>
-        <div class="weave-scroll weave-repeater-editor weave-inline-edit-fields">
+        <div v-auto-direction class="weave-scroll weave-repeater-editor weave-inline-edit-fields">
             <NodeContainer :node="draftNode" :meta="edit.meta">
                 <PublishFieldsProvider :fields="dialogFields">
                     <div v-for="field in dialogFields" :key="field.handle" class="weave-inline-edit-field">
@@ -26,8 +26,10 @@
 import { Button, Modal, ModalTitle, PublishField, PublishFieldsProvider } from '@statamic/cms/ui';
 import NodeContainer from './NodeContainer.vue';
 import { inlineDialogFields } from '../lib/inline-fields';
+import autoDirection from '../directives/auto-direction';
 
 export default {
+    directives: { autoDirection },
     components: { Button, Modal, ModalTitle, PublishField, PublishFieldsProvider, NodeContainer },
     props: { edit: { type: Object, required: true } },
     emits: ['close', 'done'],

@@ -4,7 +4,7 @@
             data-weave-block-row
             class="group flex items-center gap-1 rounded px-1 py-1 cursor-pointer"
             :class="selectedId === node.id ? 'bg-sky-50 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800'"
-            :style="{ paddingLeft: depth * 14 + 4 + 'px' }"
+            :style="{ paddingInlineStart: depth * 14 + 4 + 'px' }"
             @click="$emit('select', node.id)"
         >
             <span
@@ -25,7 +25,8 @@
                 icon-only
                 size="2xs"
                 variant="ghost"
-                class="shrink-0"
+                class="weave-disclosure-icon shrink-0"
+                :class="{ 'is-collapsed': collapsed }"
                 @click.stop="collapsed = ! collapsed"
             />
             <span v-else class="w-4 shrink-0" />
@@ -33,7 +34,7 @@
             <span v-if="iconSvg" class="inline-flex size-3.5 shrink-0 items-center justify-center text-gray-400 [&_svg]:size-3.5" v-html="iconSvg" />
             <Icon v-else :name="icon" class="size-3.5 shrink-0 text-gray-400" />
             <span class="shrink-0 text-sm font-medium">{{ label }}</span>
-            <span v-if="preview" class="min-w-0 flex-1 truncate text-xs text-gray-400">{{ preview }}</span>
+            <span v-if="preview" dir="auto" class="min-w-0 flex-1 truncate text-xs text-gray-400">{{ preview }}</span>
             <span v-else class="flex-1" />
 
             <div class="flex shrink-0 items-center" :class="node.locked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'">
@@ -50,7 +51,7 @@
             </div>
         </div>
 
-        <div v-if="node.children && !collapsed" class="border-l border-gray-200 dark:border-gray-700" :style="{ marginLeft: depth * 14 + 11 + 'px' }">
+        <div v-if="node.children && !collapsed" class="weave-block-children" :style="{ marginInlineStart: depth * 14 + 11 + 'px' }">
             <BlockList :blocks="node.children">
                 <template #default="{ node: child, startDrag, resetDrag }">
                     <BlockNode
@@ -71,7 +72,7 @@
             <button
                 type="button"
                 class="mb-1 block text-xs text-gray-400 hover:text-sky-500"
-                :style="{ paddingLeft: (depth + 1) * 14 + 4 + 'px' }"
+                :style="{ paddingInlineStart: (depth + 1) * 14 + 4 + 'px' }"
                 @click="addChild"
             >
                 + Add block
@@ -152,3 +153,13 @@ export default {
     },
 };
 </script>
+
+<style>
+.weave-block-children {
+    border-inline-start: 1px solid var(--color-gray-200, #e4e4e7);
+}
+
+.dark .weave-block-children {
+    border-color: var(--color-gray-700, #3f3f46);
+}
+</style>

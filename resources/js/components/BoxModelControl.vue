@@ -15,6 +15,7 @@
             <span class="text-[10px] uppercase tracking-wide text-gray-400">{{ __('All sides') }}</span>
             <input
                 type="number"
+                dir="ltr"
                 min="0"
                 :max="fields[0].max"
                 class="w-full rounded bg-gray-100 px-1 py-1 text-center text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200"
@@ -24,11 +25,12 @@
             />
         </div>
 
-        <div v-else class="grid grid-cols-4 gap-2">
+        <div v-else class="grid grid-cols-4 gap-2" dir="ltr">
             <div v-for="side in fields" :key="side.handle" class="flex flex-col items-center gap-1">
                 <span class="text-[10px] uppercase tracking-wide text-gray-400">{{ SIDE_LABELS[side.side] || side.side }}</span>
                 <input
                     type="number"
+                    dir="ltr"
                     min="0"
                     :max="side.max"
                     class="w-full rounded bg-gray-100 px-1 py-1 text-center text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200"

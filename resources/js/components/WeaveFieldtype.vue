@@ -2,6 +2,7 @@
     <Teleport to="body" :disabled="!fullScreenMode">
     <div
         class="weave-fieldtype"
+        :dir="uiDirection"
         :class="fullScreenMode ? 'fixed inset-0 overflow-hidden rounded-none bg-gray-100 dark:bg-gray-900' : ''"
         :style="fullScreenMode ? { zIndex: 1 } : null"
     >
@@ -106,7 +107,8 @@
                     <div
                         v-if="selectedNode"
                         v-show="propsPanelOpen"
-                        class="weave-scroll weave-props-panel absolute right-0 top-0 overflow-y-auto"
+                        class="weave-scroll weave-props-panel absolute top-0 overflow-y-auto"
+                        :data-panel-size="propsPanelSize"
                     >
                         <!-- Gate on per-node meta: fieldtype components (Grid rows,
                              Assets chips, ...) snapshot `meta` on mount and don't
@@ -119,9 +121,11 @@
                             :node="selectedNode"
                             :block-type="blockTypesMeta.find((b) => b.type === selectedNode.type)"
                             :node-meta="nodeMeta[selectedBlockId]"
+                            :size="propsPanelSize"
                             :key="selectedBlockId"
                             :focus-target="fieldFocusTarget?.id === selectedBlockId ? fieldFocusTarget : null"
                             @close="propsPanelOpen = false"
+                            @update:size="propsPanelSize = $event"
                             @meta-stale="fetchNodeMeta(selectedBlockId)"
                         />
                     </div>
@@ -162,7 +166,7 @@
 <script>
 import uuid from '../lib/uuid';
 import { Fieldtype, clone, debounce } from '@statamic/cms';
-import { Button } from '@statamic/cms/ui';
+import { Button, useUiDirection } from '@statamic/cms/ui';
 import BlocksPanel from './BlocksPanel.vue';
 import CanvasFrame from './Canvas.vue';
 import ContextMenu from './ContextMenu.vue';
@@ -175,6 +179,11 @@ import { resolveInlineScope, applyInlineEdit } from '../lib/inline-edit';
 import { reorderNodes } from '../lib/reorder';
 
 export default {
+    setup() {
+        const { direction } = useUiDirection();
+        return { uiDirection: direction };
+    },
+
     mixins: [Fieldtype],
 
     components: { Button, BlocksPanel, CanvasFrame, ContextMenu, PropsPanel, InlineEditDialog },
@@ -186,6 +195,7 @@ export default {
             fullScreenMode: false,
             blocksPanelOpen: true,
             propsPanelOpen: true,
+            propsPanelSize: 'compact',
             // Per-node field meta, keyed by node id — Grid row metas, resolved
             // titles/thumbnails for relational fields, ... Seeded server-side by
             // Weave::preload()'s nodeMeta (computed from the actual saved values)
@@ -462,6 +472,18 @@ export default {
 </script>
 
 <style>
+.weave-fieldtype {
+    --weave-inline-sign: 1;
+}
+
+.weave-fieldtype:dir(rtl) {
+    --weave-inline-sign: -1;
+}
+
+.weave-disclosure-icon.is-collapsed:dir(rtl) {
+    transform: scaleX(-1);
+}
+
 /* Global (not scoped): also used inside BlocksPanel.vue's own template (Add block picker),
    a child component — Vue scoped CSS doesn't cross into child components' templates.
    Statamic's own CP CSS has no rule for these panels' native scrollbar (this addon
@@ -474,9 +496,9 @@ export default {
 
 .weave-blocks-drawer {
     width: var(--weave-drawer-width);
-    margin-right: 4px;
+    margin-inline-end: 4px;
     overflow: hidden;
-    transition: width var(--weave-panel-motion), margin-right var(--weave-panel-motion);
+    transition: width var(--weave-panel-motion), margin-inline-end var(--weave-panel-motion);
 }
 
 .weave-editor-layout {
@@ -494,11 +516,11 @@ export default {
 
 .weave-blocks-drawer.is-closed {
     width: 0;
-    margin-right: 0;
+    margin-inline-end: 0;
 }
 
 .weave-blocks-drawer.is-closed .weave-blocks-drawer-content {
-    transform: translateX(-100%);
+    transform: translateX(calc(-100% * var(--weave-inline-sign)));
     opacity: 0;
 }
 
@@ -507,13 +529,27 @@ export default {
 }
 
 .weave-props-panel {
+    --weave-props-width: 20rem;
+    --weave-props-resize-motion: 280ms cubic-bezier(0.22, 1, 0.36, 1);
     top: 8px;
-    right: 8px;
-    width: min(20rem, calc(100% - 16px));
+    inset-inline-end: 8px;
+    width: min(var(--weave-props-width), calc(100% - 16px));
     max-height: calc(100% - 16px);
     z-index: 1;
     border-radius: 0.5rem;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+    container: weave-properties / inline-size;
+    scroll-padding-top: 4rem;
+    /* Width must reflow the fields and categories during the resize. */
+    transition: width var(--weave-props-resize-motion);
+}
+
+.weave-props-panel[data-panel-size="medium"] {
+    --weave-props-width: 36rem;
+}
+
+.weave-props-panel[data-panel-size="wide"] {
+    --weave-props-width: 56rem;
 }
 
 .weave-props-enter-active,
@@ -523,13 +559,17 @@ export default {
 
 .weave-props-enter-from,
 .weave-props-leave-to {
-    transform: translateX(calc(100% + 8px));
+    transform: translateX(calc((100% + 8px) * var(--weave-inline-sign)));
     opacity: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
     .weave-editor-layout {
         --weave-panel-motion: 0ms linear;
+    }
+
+    .weave-props-panel {
+        --weave-props-resize-motion: 0ms linear;
     }
 }
 

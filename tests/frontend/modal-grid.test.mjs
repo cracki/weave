@@ -35,6 +35,7 @@ function loadModalGrid() {
         .replace(/^import .*;$/gm, '').replace('export default', 'globalThis.component =');
     const fieldProps = Object.fromEntries(['value', 'config', 'handle', 'meta', 'readOnly', 'showFieldPreviews', 'namePrefix', 'fieldPathPrefix', 'metaPathPrefix', 'id'].map(key => [key, {}]));
     const context = {
+        autoDirection: {},
         Button: { props: ['disabled'], render() { return Vue.h('button', { disabled: this.disabled }, this.$slots.default?.()); } },
         ModalTitle: { render() { return Vue.h('h2', this.$slots.default?.()); } },
         Modal: {

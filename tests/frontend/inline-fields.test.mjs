@@ -34,7 +34,7 @@ test('dialog text controls grow without changing field types, validation, condit
     assert.deepEqual(fields, original);
 });
 
-test('elastic controls preserve RTL, read-only, character limits, and emit edits immediately for Done', async () => {
+test('elastic controls use automatic direction, preserve read-only and limits, and emit edits immediately for Done', async () => {
     let control;
     const events = [];
     const source = readFileSync(new URL('../../resources/js/components/ElasticTextFieldtype.vue', import.meta.url), 'utf8');
@@ -45,7 +45,6 @@ test('elastic controls preserve RTL, read-only, character limits, and emit edits
             methods: { update(value) { this.$emit('update:value', value); } },
         } },
         Textarea: { render() { control = this.$attrs; return Vue.h('textarea', this.$attrs); } },
-        useContentDirection: () => ({ direction: Vue.ref('rtl') }),
     };
     const script = source.match(/<script>([\s\S]*?)<\/script>/)[1]
         .replace(/^import .*;$/gm, '').replace('export default', 'globalThis.component =');
@@ -61,7 +60,7 @@ test('elastic controls preserve RTL, read-only, character limits, and emit edits
     assert.equal(control.elastic, '');
     assert.equal(control.rows, 1);
     assert.equal(control.resize, 'none');
-    assert.equal(control.dir, 'rtl');
+    assert.equal(control.dir, 'auto');
     assert.equal(control['read-only'], true);
     assert.equal(control.limit, 200);
     assert.equal(control.id, 'title-input');
